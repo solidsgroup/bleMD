@@ -170,7 +170,7 @@ def loadUpdatedData():
     nframes = pipeline.source.num_frames
     bpy.context.scene.my_tool.number_of_lammps_frames = nframes
     
-    fac = frame % interp
+    fac = (frame % interp)/interp
     frame_lo = int(frame / interp)
     if not "MD_Object" in bpy.data.objects.keys():
         me = bpy.data.meshes.new("MD_Mesh")
@@ -182,6 +182,8 @@ def loadUpdatedData():
         me = ob.data
 
     
+    print("fac",fac)
+    print("frame_lo",frame_lo)
 
     if fac == 0:
         data = pipeline.compute(frame_lo)
@@ -189,6 +191,7 @@ def loadUpdatedData():
         #print("frame = {} of {}".format(frame,pipeline.source.num_frames))
     else:
         frame_hi = frame_lo + 1
+        print("frame_hi",frame_hi)
         data_lo = pipeline.compute(frame_lo)
         data_hi = pipeline.compute(frame_hi)
         coords = [list((1-fac)*xyz_lo + fac*xyz_hi) for xyz_lo, xyz_hi in
