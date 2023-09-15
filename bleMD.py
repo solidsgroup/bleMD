@@ -48,20 +48,27 @@ from bpy.types import (Panel,
                        )
 
 
+import ovito
+
 # ------------------------------------------------------------------------
 #    Scene Properties
 # ------------------------------------------------------------------------
 
 class MyProperties(PropertyGroup):
 
-    pipeline = None
-
     valid_lammps_file: BoolProperty(default = False)
+    number_of_lammps_frames: IntProperty(default = 1)
 
     my_bool: BoolProperty(
         name="Create a new object",
         description="A bool property",
         default = True
+        )
+
+    update_on_frame_change: BoolProperty(
+        name="Update when frame changes",
+        description="Do a refresh of positions when frame changes (warning - can cause slowdown)",
+        default = False
         )
 
     my_int: IntProperty(
@@ -70,6 +77,23 @@ class MyProperties(PropertyGroup):
         default = 23,
         min = 10,
         max = 100
+        )
+
+
+    def updateFrameStride(self,context):
+        scene=context.scene
+        mytool=scene.my_tool
+        nframes = mytool.number_of_lammps_frames
+        stride = mytool.my_lammps_frame_stride
+        bpy.context.scene.frame_end = nframes * stride
+        
+    my_lammps_frame_stride: IntProperty(
+        name = "Frame interpolation stride",
+        description="How many frames to interpolate",
+        default = 1,
+        min = 1,
+        max = 100,
+        update = updateFrameStride,
         )
 
     my_lammps_frame_min: IntProperty(
@@ -87,38 +111,6 @@ class MyProperties(PropertyGroup):
         max = 100
         )
 
-
-#    my_float: FloatProperty(
-#        name = "Float Value",
-#        description = "A float property",
-#        default = 23.7,
-#        min = 0.01,
-#        max = 30.0
-#        )
-
-#    my_float_vector: FloatVectorProperty(
-#        name = "Float Vector Value",
-#        description="Something",
-#        default=(0.0, 0.0, 0.0), 
-#        min= 0.0, # float
-#        max = 0.1
-#    ) 
-
-#    my_string: StringProperty(
-#        name="User Input",
-#        description=":",
-#        default="",
-#        maxlen=1024,
-#        )
-
-#    my_path: StringProperty(
-#        name = "Directory",
-#        description="Choose a directory:",
-#        default="",
-#        maxlen=1024,
-#        subtype='DIR_PATH'
-#        )
-
     def openLAMMPSFile(self,context):
         scene=context.scene
         mytool=scene.my_tool
@@ -127,8 +119,11 @@ class MyProperties(PropertyGroup):
         sys.path.append(mytool.my_ovitodir)
         import ovito
         from ovito.io import import_file
-        pipeline = import_file(mytool.my_lammpsfile)
-        self.my_lammps_frame_max = pipeline.source.num_frames
+        pipeline = import_file(mytool.my_lammpsfile, sort_particles=True)
+        nframes = pipeline.source.num_frames
+        mytool.number_of_lammps_frames = nframes
+
+        bpy.context.scene.frame_end = nframes * mytool.my_lammps_frame_stride
 
         mytool.valid_lammps_file = True
 
@@ -148,15 +143,68 @@ class MyProperties(PropertyGroup):
         maxlen=1024,
         subtype='DIR_PATH'
         )
+
+    my_renderpath: StringProperty(
+        name = "Render output directory",
+        description="Choose a file:",
+        default="/tmp/",
+        maxlen=1024,
+        subtype='DIR_PATH'
+        )
         
-#    my_enum: EnumProperty(
-#        name="Dropdown:",
-#        description="Apply Data to attribute.",
-#        items=[ ('OP1', "Option 1", ""),
-#                ('OP2', "Option 2", ""),
-#                ('OP3', "Option 3", ""),
-#               ]
-#        )
+
+def loadUpdatedData():
+
+    filename = bpy.context.scene.my_tool.my_lammpsfile
+    interp = bpy.context.scene.my_tool.my_lammps_frame_stride
+    frame = bpy.data.scenes[0].frame_current
+
+    from ovito.io import import_file
+    from ovito.modifiers import UnwrapTrajectoriesModifier
+    from ovito.modifiers import WrapPeriodicImagesModifier
+
+    pipeline = import_file(filename, sort_particles=True)
+    pipeline.modifiers.append(WrapPeriodicImagesModifier())
+    pipeline.modifiers.append(UnwrapTrajectoriesModifier())
+
+    nframes = pipeline.source.num_frames
+    bpy.context.scene.my_tool.number_of_lammps_frames = nframes
+    
+    fac = frame % interp
+    frame_lo = int(frame / interp)
+    if not "MD_Object" in bpy.data.objects.keys():
+        me = bpy.data.meshes.new("MD_Mesh")
+        ob = bpy.data.objects.new("MD_Object", me)
+        ob.show_name = True
+        bpy.context.collection.objects.link(ob)
+    else:
+        ob = bpy.data.objects['MD_Object']
+        me = ob.data
+
+    
+
+    if fac == 0:
+        data = pipeline.compute(frame_lo)
+        coords = [list(xyz) for xyz in data.particles.positions]
+        #print("frame = {} of {}".format(frame,pipeline.source.num_frames))
+    else:
+        frame_hi = frame_lo + 1
+        data_lo = pipeline.compute(frame_lo)
+        data_hi = pipeline.compute(frame_hi)
+        coords = [list((1-fac)*xyz_lo + fac*xyz_hi) for xyz_lo, xyz_hi in
+                  zip(data_lo.particles.positions,data_hi.particles.positions)]
+    if not len(me.vertices):
+        me.from_pydata(coords,[],[])
+    else:
+        for i,v in enumerate(me.vertices):
+            new_location = v.co            
+            new_location[0] = coords[i][0]
+            new_location[1] = coords[i][1]
+            new_location[2] = coords[i][2]
+            v.co = new_location
+    me.update()
+    
+
 
 # ------------------------------------------------------------------------
 #    Operators
@@ -166,90 +214,30 @@ class WM_OT_HelloWorld(Operator):
     bl_idname = "wm.hello_world"
     bl_label = "Read LAMMPS File"
 
+    my_tmp_cntr = 0
+
     def execute(self, context):
-        scene = context.scene
-        mytool = scene.my_tool
-
-        from ovito.io import import_file
-        pipeline = import_file(mytool.my_lammpsfile)
-
-        #for frame in [0]:# range(pipeline.source.num_frames):
-
-        data = pipeline.compute(0)
-        coords = [list(xyz) for xyz in data.particles.positions]
-        #print("frame = {} of {}".format(frame,pipeline.source.num_frames))
-        me = bpy.data.meshes.new("MD_Mesh")
-        ob = bpy.data.objects.new("MD_Object", me)
-        ob.show_name = True
-        bpy.context.collection.objects.link(ob)
-        me.from_pydata(coords,[],[])
-        me.update()
-
+        #scene = context.scene
+        #mytool = scene.my_tool
+        loadUpdatedData()
         
-        #if not len(ob.modifiers):
-        #modifier = ob.modifiers.new("Atoms",type="NODES")
-        #modifier.node.new_geometry
 
         return {'FINISHED'}
 
 
-#class MessageBox(bpy.types.Operator):
-#    bl_idname = "message.messagebox"
-#    bl_label = "Open LAMMPS dump file"
-# 
-#    message = bpy.props.StringProperty(
-#        name = "message",
-#        description = "message",
-#        default = ''
-#    )
-# 
-#    def execute(self, context):
-#        #self.report({'INFO'}, self.message)
-#        print("OK GETTING REA")
-#        print(self.message)
-#        return {'FINISHED'}
-# 
-#    def invoke(self, context, event):
-#        #return context.window_manager.invoke_props_dialog(self, width = 400)
-#        return context.window_manager.invoke_props_popup(self, width = 400)
-# 
-#    def draw(self, context):
-#        scene = context.scene
-#        mytool = scene.my_tool
-#        self.layout.prop(mytool, "my_bool")
-#        self.layout.prop(mytool, "my_lammpsfile")
-#        self.layout.prop(mytool, "my_ovitodir")
+class WM_OT_RenderAnimation(Operator):
+    bl_idname = "wm.render_animation"
+    bl_label = "Render animation"
+    def execute(self, context):
+        scene = bpy.context.scene
+        for frame in range(scene.frame_start, scene.frame_end + 1):
+            print("Rendering ",frame)
+            scene.render.filepath = scene.my_tool.my_renderpath + str(frame).zfill(4)
+            scene.frame_set(frame)
+            loadUpdatedData()
+            bpy.ops.render.render(write_still=True)
 
-
-        
-# Creates a menu for global 3D View
-#class customMenu(bpy.types.Menu):
-#    bl_label = "Custom Menu"
-#    bl_idname = "view3D.custom_menu"
-#
-#    # Set the menu operators and draw functions
-#    def draw(self, context):
-#        layout = self.layout
-#
-#        layout.operator("mesh.primitive_cube_add")
-#        layout.operator("object.duplicate_move")           
-
-# ------------------------------------------------------------------------
-#    Menus
-# ------------------------------------------------------------------------
-#class BasicMenu(bpy.types.Menu):
-#    bl_idname = "OBJECT_MT_select_test"
-#    bl_label = "My Select"
-#
-#    def draw(self, context):
-#        layout = self.layout
-#
-#        layout.operator("object.select_all", text="Select/Deselect All").action = 'TOGGLE'
-#        layout.operator("object.select_all", text="Inverse").action = 'INVERT'
-#        layout.operator("object.select_random", text="Random")
-
-
-
+        return {'FINISHED'}
 
 # ------------------------------------------------------------------------
 #    Panel in Object Mode
@@ -262,9 +250,27 @@ class OBJECT_PT_bleMDPanel(Panel):
     bl_region_type = "WINDOW"
     bl_context = "object"
 
+
     @classmethod
     def poll(self,context):
         return context.object is not None
+    
+    def execute(self, context):
+        print("I'm here")
+        #scene = context.scene
+        #mytool = scene.my_tool
+        #from ovito.io import import_file
+        #pipeline = import_file(mytool.my_lammpsfile)
+        #data = pipeline.compute(0)
+        #coords = [list(xyz) for xyz in data.particles.positions]
+        #me = bpy.data.meshes.new("MD_Mesh")
+        #ob = bpy.data.objects.new("MD_Object", me)
+        #ob.show_name = True
+        #bpy.context.collection.objects.link(ob)
+        #me.from_pydata(coords,[],[])
+        #me.update()
+        return {'FINISHED'}
+
 
     def draw(self, context):
         layout = self.layout
@@ -272,23 +278,26 @@ class OBJECT_PT_bleMDPanel(Panel):
         mytool = scene.my_tool
 
         layout.prop(mytool, "my_bool")
+        layout.prop(mytool, "update_on_frame_change")
+
         layout.prop(mytool, "my_lammpsfile")
         layout.prop(mytool, "my_ovitodir")
 
+        layout.prop(mytool, "my_lammps_frame_stride")
         #layout.prop(mytool, "my_enum", text="") 
         
-        if mytool.valid_lammps_file:
-            layout.label(text="Frame selection")
-            row = layout.row()
-            row.prop(mytool, "my_lammps_frame_min")
-            row.prop(mytool, "my_lammps_frame_max")
-        #layout.prop(mytool, "my_float")
-        #layout.prop(mytool, "my_float_vector", text="")
-        #layout.prop(mytool, "my_string")
-        #layout.prop(mytool, "my_path")
+        #if mytool.valid_lammps_file:
+        #    layout.label(text="Frame selection")
+        #    row = layout.row()
+        #    row.prop(mytool, "my_lammps_frame_min")
+        #    row.prop(mytool, "my_lammps_frame_max")
+
         layout.operator("wm.hello_world")
-        #layout.menu(OBJECT_MT_CustomMenu.bl_idname, text="Presets", icon="SCENE")
-        #layout.separator()
+
+        layout.row().separator()
+        layout.prop(mytool, "my_renderpath")
+        layout.operator("wm.render_animation")
+
 
 # ------------------------------------------------------------------------
 #    Registration
@@ -297,6 +306,7 @@ class OBJECT_PT_bleMDPanel(Panel):
 classes = (
     MyProperties,
     WM_OT_HelloWorld,
+    WM_OT_RenderAnimation,
     OBJECT_PT_bleMDPanel,
 #    OBJECT_MT_CustomMenu,
 #    MessageBox,
@@ -304,6 +314,9 @@ classes = (
 )
 
 def frame_handler(scene, depsgraph):
+    if bpy.context.scene.my_tool.update_on_frame_change:
+        loadUpdatedData()
+
     print(bpy.data.scenes[0].frame_current)
 
 
@@ -312,6 +325,7 @@ def register():
     for cls in classes:
         register_class(cls)
 
+    bpy.app.handlers.frame_change_post.clear()
     bpy.app.handlers.frame_change_post.append(frame_handler)
 
     bpy.types.Scene.my_tool = PointerProperty(type=MyProperties)
