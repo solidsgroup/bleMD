@@ -40,15 +40,18 @@ from bpy.props import (StringProperty,
                        FloatVectorProperty,
                        EnumProperty,
                        PointerProperty,
+                       BoolVectorProperty,
                        )
 from bpy.types import (Panel,
                        Menu,
                        Operator,
                        PropertyGroup,
+                       UIList,
                        )
 
 
 import ovito
+
 
 # ------------------------------------------------------------------------
 #    Scene Properties
@@ -151,6 +154,12 @@ class MyProperties(PropertyGroup):
         maxlen=1024,
         subtype='DIR_PATH'
         )
+
+    datafields: BoolVectorProperty(
+        name = "Stuff",
+        description = "the things",
+        size = 4,
+        )
         
 
 def loadUpdatedData():
@@ -181,14 +190,10 @@ def loadUpdatedData():
         ob = bpy.data.objects['MD_Object']
         me = ob.data
 
-    
-    print("fac",fac)
-    print("frame_lo",frame_lo)
-
     if fac == 0:
         data = pipeline.compute(frame_lo)
         coords = [list(xyz) for xyz in data.particles.positions]
-        #print("frame = {} of {}".format(frame,pipeline.source.num_frames))
+        c_csym = [x for x in data.particles['c_csym']]
     else:
         frame_hi = frame_lo + 1
         print("frame_hi",frame_hi)
@@ -196,8 +201,12 @@ def loadUpdatedData():
         data_hi = pipeline.compute(frame_hi)
         coords = [list((1-fac)*xyz_lo + fac*xyz_hi) for xyz_lo, xyz_hi in
                   zip(data_lo.particles.positions,data_hi.particles.positions)]
+        c_csym = [(1-fac)*x_lo + fac*x_hi for x_lo,x_hi in zip(data_lo.particles['c_csym'], data_hi.particles['c_csym'])]
+
     if not len(me.vertices):
         me.from_pydata(coords,[],[])
+        attr = me.attributes.new("c_csym",'FLOAT','POINT')
+        attr.data.foreach_set("value",c_csym)
     else:
         for i,v in enumerate(me.vertices):
             new_location = v.co            
@@ -205,6 +214,8 @@ def loadUpdatedData():
             new_location[1] = coords[i][1]
             new_location[2] = coords[i][2]
             v.co = new_location
+        attr = me.attributes.get('c_csym')
+        attr.data.foreach_set("value",c_csym)
     me.update()
     
 
@@ -295,12 +306,16 @@ class OBJECT_PT_bleMDPanel(Panel):
         #    row.prop(mytool, "my_lammps_frame_min")
         #    row.prop(mytool, "my_lammps_frame_max")
 
+        layout.prop(mytool,"datafields")
+
         layout.operator("wm.hello_world")
 
         layout.row().separator()
         layout.prop(mytool, "my_renderpath")
         layout.operator("wm.render_animation")
 
+        
+        obj = context.object
 
 # ------------------------------------------------------------------------
 #    Registration
@@ -314,6 +329,7 @@ classes = (
 #    OBJECT_MT_CustomMenu,
 #    MessageBox,
 #    BasicMenu,
+#    MATERIAL_UL_matslots_example,
 )
 
 def frame_handler(scene, depsgraph):
