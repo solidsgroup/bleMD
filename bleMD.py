@@ -162,11 +162,9 @@ class MyProperties(PropertyGroup):
         )
         
 
-def loadUpdatedData():
-
+def startOvito():
     filename = bpy.context.scene.my_tool.my_lammpsfile
     interp = bpy.context.scene.my_tool.my_lammps_frame_stride
-    frame = bpy.data.scenes[0].frame_current
 
     from ovito.io import import_file
     from ovito.modifiers import UnwrapTrajectoriesModifier
@@ -178,6 +176,13 @@ def loadUpdatedData():
 
     nframes = pipeline.source.num_frames
     bpy.context.scene.my_tool.number_of_lammps_frames = nframes
+
+    return pipeline
+    
+
+def loadUpdatedData(pipeline):
+    frame = bpy.data.scenes[0].frame_current
+    interp = bpy.context.scene.my_tool.my_lammps_frame_stride
     
     fac = (frame % interp)/interp
     frame_lo = int(frame / interp)
@@ -233,8 +238,54 @@ class WM_OT_HelloWorld(Operator):
     def execute(self, context):
         #scene = context.scene
         #mytool = scene.my_tool
-        loadUpdatedData()
+        pipeline = startOvito()
+        loadUpdatedData(pipeline)
         
+
+        return {'FINISHED'}
+
+
+class WM_OT_RigKeyframes(Operator):
+    bl_idname = "wm.rig_keyframes"
+    bl_label = "Rig Keyframes"
+    def execute(self, context):
+        scene = bpy.context.scene
+        nlammpsframes = scene.my_tool.number_of_lammps_frames
+        stride = scene.my_tool.my_lammps_frame_stride
+
+
+        keyInterp = context.preferences.edit.keyframe_new_interpolation_type
+        context.preferences.edit.keyframe_new_interpolation_type ='LINEAR'
+
+
+        ob = bpy.data.objects['MD_Object']
+
+        if ob.data.shape_keys:
+            for key in ob.data.shape_keys.key_blocks:
+                ob.shape_key_remove(key)
+
+        pipeline = startOvito()
+        for i in range(nlammpsframes):
+            loadUpdatedData(pipeline)
+            print(i)
+            scene.frame_set(i*stride)
+
+            ob.data.shape_keys
+
+
+            ob.shape_key_add(name="Key"+str(i).zfill(4),from_mix=False)
+            
+            if i>0:
+                for j in range(nlammpsframes):
+                    if j==i:
+                        bpy.data.shape_keys["Key"].key_blocks["Key"+str(i).zfill(4)].value=1
+                    else:
+                        bpy.data.shape_keys["Key"].key_blocks["Key"+str(i).zfill(4)].value=0
+                    keyframe = bpy.data.shape_keys["Key"].key_blocks["Key"+str(i).zfill(4)].keyframe_insert("value",frame=j*stride)
+            
+
+        context.preferences.edit.keyframe_new_interpolation_type = keyInterp
+
 
         return {'FINISHED'}
 
@@ -313,6 +364,7 @@ class OBJECT_PT_bleMDPanel(Panel):
         layout.row().separator()
         layout.prop(mytool, "my_renderpath")
         layout.operator("wm.render_animation")
+        layout.operator("wm.rig_keyframes")
 
         
         obj = context.object
@@ -325,6 +377,7 @@ classes = (
     MyProperties,
     WM_OT_HelloWorld,
     WM_OT_RenderAnimation,
+    WM_OT_RigKeyframes,
     OBJECT_PT_bleMDPanel,
 #    OBJECT_MT_CustomMenu,
 #    MessageBox,
