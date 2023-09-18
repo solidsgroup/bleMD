@@ -45,6 +45,7 @@ from bpy.props import (StringProperty,
                        EnumProperty,
                        PointerProperty,
                        BoolVectorProperty,
+                       CollectionProperty,
                        )
 from bpy.types import (Panel,
                        Menu,
@@ -66,18 +67,6 @@ class MyProperties(PropertyGroup):
     valid_lammps_file: BoolProperty(default = False)
     number_of_lammps_frames: IntProperty(default = 1)
 
-    my_bool: BoolProperty(
-        name="Create a new object",
-        description="A bool property",
-        default = True
-        )
-
-    particle_properties: BoolVectorProperty(
-        name="Update when frame changes",
-        description="TODO",
-        size=3,
-        )
-    
     my_int: IntProperty(
         name = "Int Value",
         description="A integer property",
@@ -92,6 +81,7 @@ class MyProperties(PropertyGroup):
         mytool=scene.my_tool
         nframes = mytool.number_of_lammps_frames
         stride = mytool.my_lammps_frame_stride
+        bpy.context.scene.frame_start = 0
         bpy.context.scene.frame_end = nframes * stride
         
     my_lammps_frame_stride: IntProperty(
@@ -139,6 +129,9 @@ class MyProperties(PropertyGroup):
         for prop in props:
             item  = scene.my_list.add()
             item.name = prop
+            if prop == "Position":
+                item.enable=True
+                item.editable=False
 
 
     my_lammpsfile: StringProperty(
@@ -166,12 +159,17 @@ class MyProperties(PropertyGroup):
         subtype='DIR_PATH'
         )
 
-    datafields: BoolVectorProperty(
-        name = "Stuff",
-        description = "the things",
-        size = 4,
-        )
-        
+
+    #
+    # Ovito Modifiers
+    #
+    ovito_wrap_periodic_images: BoolProperty(
+        name="OVITO Wrap Periodic Images",
+        default = False)
+    ovito_unwrap_trajectories: BoolProperty(
+        name="OVITO Unwrap Trajectories",
+        default = False)
+
 
 def startOvito():
     filename = bpy.context.scene.my_tool.my_lammpsfile
@@ -182,8 +180,10 @@ def startOvito():
     from ovito.modifiers import WrapPeriodicImagesModifier
 
     pipeline = import_file(filename, sort_particles=True)
-    pipeline.modifiers.append(WrapPeriodicImagesModifier())
-    pipeline.modifiers.append(UnwrapTrajectoriesModifier())
+    if bpy.context.scene.my_tool.ovito_wrap_periodic_images:
+        pipeline.modifiers.append(WrapPeriodicImagesModifier())
+    if bpy.context.scene.my_tool.ovito_unwrap_trajectories:
+        pipeline.modifiers.append(UnwrapTrajectoriesModifier())
 
     nframes = pipeline.source.num_frames
     bpy.context.scene.my_tool.number_of_lammps_frames = nframes
@@ -194,9 +194,15 @@ def startOvito():
 def loadUpdatedData(pipeline):
     frame = bpy.data.scenes[0].frame_current
     interp = bpy.context.scene.my_tool.my_lammps_frame_stride
-    
+
+    # Determine interpolation (if any)
     fac = (frame % interp)/interp
     frame_lo = int(frame / interp)
+
+    print("FAC = ",fac)
+    print("frame_lo ",frame_lo)
+
+    # Set up the object or grab the existing object
     if not "MD_Object" in bpy.data.objects.keys():
         me = bpy.data.meshes.new("MD_Mesh")
         ob = bpy.data.objects.new("MD_Object", me)
@@ -206,23 +212,33 @@ def loadUpdatedData(pipeline):
         ob = bpy.data.objects['MD_Object']
         me = ob.data
 
+    attrs = {}
     if fac == 0:
         data = pipeline.compute(frame_lo)
         coords = [list(xyz) for xyz in data.particles.positions]
-        c_csym = [x for x in data.particles['c_csym']]
+        for prop in bpy.context.scene.my_list:
+            if prop.enable and prop.editable:
+                attrs[prop.name] = [x for x in data.particles[prop.name]]
+        #c_csym = [x for x in data.particles['c_csym']]
     else:
         frame_hi = frame_lo + 1
-        print("frame_hi",frame_hi)
         data_lo = pipeline.compute(frame_lo)
         data_hi = pipeline.compute(frame_hi)
         coords = [list((1-fac)*xyz_lo + fac*xyz_hi) for xyz_lo, xyz_hi in
                   zip(data_lo.particles.positions,data_hi.particles.positions)]
-        c_csym = [(1-fac)*x_lo + fac*x_hi for x_lo,x_hi in zip(data_lo.particles['c_csym'], data_hi.particles['c_csym'])]
+        for prop in bpy.context.scene.my_list:
+            if prop.enable and prop.editable:
+                attrs[prop.name] = [(1-fac)*x_lo + fac*x_hi for x_lo,x_hi in
+                                    zip(data_lo.particles[prop.name], data_hi.particles[prop.name])]
+
+        #c_csym = [(1-fac)*x_lo + fac*x_hi for x_lo,x_hi in zip(data_lo.particles['c_csym'], data_hi.particles['c_csym'])]
 
     if not len(me.vertices):
         me.from_pydata(coords,[],[])
-        attr = me.attributes.new("c_csym",'FLOAT','POINT')
-        attr.data.foreach_set("value",c_csym)
+        for prop in bpy.context.scene.my_list:
+            if prop.enable and prop.editable:
+                attr = me.attributes.new(prop.name,'FLOAT','POINT')
+                attr.data.foreach_set("value",attrs[prop.name])
     else:
         for i,v in enumerate(me.vertices):
             new_location = v.co            
@@ -230,8 +246,15 @@ def loadUpdatedData(pipeline):
             new_location[1] = coords[i][1]
             new_location[2] = coords[i][2]
             v.co = new_location
-        attr = me.attributes.get('c_csym')
-        attr.data.foreach_set("value",c_csym)
+            
+        for prop in bpy.context.scene.my_list:
+            if prop.enable and prop.editable:
+                if not prop.name in me.attributes.keys():
+                    attr = me.attributes.new(prop.name,'FLOAT','POINT')
+                else:
+                    attr = me.attributes.get(prop.name)
+                attr.data.foreach_set("value",attrs[prop.name])
+
     me.update()
     
 
@@ -241,8 +264,8 @@ def loadUpdatedData(pipeline):
 # ------------------------------------------------------------------------
 
 class WM_OT_HelloWorld(Operator):
-    bl_idname = "wm.hello_world"
-    bl_label = "Read LAMMPS File"
+    bl_idname = "wm.read_lammps_file"
+    bl_label = "Load File"
 
     my_tmp_cntr = 0
 
@@ -361,41 +384,35 @@ class OBJECT_PT_bleMDPanel(Panel):
         scene = context.scene
         mytool = scene.my_tool
 
-        layout.prop(mytool, "my_bool")
-        #layout.prop(mytool, "update_on_frame_change")
-
-        layout.prop(mytool, "my_lammpsfile")
         layout.prop(mytool, "my_ovitodir")
 
+        layout.label(text="Input file")
+        layout.prop(mytool, "my_lammpsfile")
+
+        layout.label(text="OVITO Operations")
+
+        layout.prop(mytool,"ovito_wrap_periodic_images")
+        layout.prop(mytool,"ovito_unwrap_trajectories")
+
+        if len(scene.my_list):
+            layout.label(text="Data fields from file")
+            row = layout.row()
+            row.template_list("MY_UL_List", "The_List", scene,
+                              "my_list", scene, "list_index")
+
+        layout.operator("wm.read_lammps_file")
+
+        layout.label(text="Animation")
+
         layout.prop(mytool, "my_lammps_frame_stride")
-        #layout.prop(mytool, "my_enum", text="") 
-        
-        #if mytool.valid_lammps_file:
-        #    layout.label(text="Frame selection")
-        #    row = layout.row()
-        #    row.prop(mytool, "my_lammps_frame_min")
-        #    row.prop(mytool, "my_lammps_frame_max")
-
-        layout.prop(mytool,"datafields")
-
-        layout.operator("wm.hello_world")
-
-        layout.row().separator()
-        layout.prop(mytool, "my_renderpath")
-        layout.operator("wm.render_animation")
         layout.operator("wm.rig_keyframes")
 
-        col = layout.column()
-        box = col.box()
-        box.prop(mytool,"particle_properties")
+        layout.label(text="Render")
+
+        layout.prop(mytool, "my_renderpath")
+        layout.operator("wm.render_animation")
+
         
-        row = layout.row()
-        row.template_list("MY_UL_List", "The_List", scene,
-                          "my_list", scene, "list_index")
-
-        obj = context.object
-
-
 
 
 
@@ -419,6 +436,12 @@ class ParticleProperty(PropertyGroup):
            name="Enable",
            description="Include as a coloring property")
 
+    editable: BoolProperty(
+           name="Editable",
+           description="Whether or not the user can modify",
+        default=True,
+        )
+
 
 class MY_UL_List(UIList):
     """Demo UIList."""
@@ -431,53 +454,37 @@ class MY_UL_List(UIList):
 
         # Make sure your code supports all 3 layout types
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            layout.label(text=item.name, icon = custom_icon)
-            layout.prop(item,"enable")
+            row = layout.row()
+            row.label(text=item.name, icon = custom_icon)
+            row = layout.row()
+            row.enabled = item.editable
+            row.prop(item,"enable")
 
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
             layout.label(text="", icon = custom_icon)
 
 
-class LIST_OT_NewItem(Operator):
-    """Add a new item to the list."""
-
-    bl_idname = "my_list.new_item"
-    bl_label = "Add a new item"
-
-    def execute(self, context):
-        item  = context.scene.my_list.add()
-        item.name = "Hello"
-        print(item)
-        #context.scene.my_list.clear()
-
-        return{'FINISHED'}
-
-
+#class LIST_OT_NewItem(Operator):
+#    """Add a new item to the list."""
+#
+#    bl_idname = "my_list.new_item"
+#    bl_label = "Add a new item"
+#
+#    def execute(self, context):
+#        item  = context.scene.my_list.add()
+#        item.name = "Hello"
+#        print(item)
+#        #context.scene.my_list.clear()
+#
+#        return{'FINISHED'}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def frame_handler(scene, depsgraph):
-    if bpy.context.scene.my_tool.update_on_frame_change:
-        loadUpdatedData()
-
-    print(bpy.data.scenes[0].frame_current)
+#def frame_handler(scene, depsgraph):
+#    if bpy.context.scene.my_tool.update_on_frame_change:
+#        loadUpdatedData()
+#
+#    print(bpy.data.scenes[0].frame_current)
 
 
 
@@ -499,7 +506,7 @@ classes = (
 #    uilist.UIListPanelExample1,
     ParticleProperty,
     MY_UL_List,
-    LIST_OT_NewItem,
+#    LIST_OT_NewItem,
 #    PT_ListExample,
 )
 
@@ -512,9 +519,15 @@ def register():
         register_class(cls)
 
     bpy.app.handlers.frame_change_post.clear()
-    bpy.app.handlers.frame_change_post.append(frame_handler)
+    #bpy.app.handlers.frame_change_post.append(frame_handler)
+
 
     bpy.types.Scene.my_tool = PointerProperty(type=MyProperties)
+
+    print("He")
+    bpy.types.Scene.my_list = CollectionProperty(type = ParticleProperty)
+    bpy.types.Scene.list_index = IntProperty(name = "Index for my_list",default = 0)
+
 
 def unregister():
     from bpy.utils import unregister_class
