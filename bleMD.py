@@ -33,6 +33,10 @@ bl_info = {
 
 import bpy
 
+import sys
+sys.path.append("/home/brunnels/Research/bleMD/")
+import uilist
+
 from bpy.props import (StringProperty,
                        BoolProperty,
                        IntProperty,
@@ -68,12 +72,12 @@ class MyProperties(PropertyGroup):
         default = True
         )
 
-    update_on_frame_change: BoolProperty(
+    particle_properties: BoolVectorProperty(
         name="Update when frame changes",
-        description="Do a refresh of positions when frame changes (warning - can cause slowdown)",
-        default = False
+        description="TODO",
+        size=3,
         )
-
+    
     my_int: IntProperty(
         name = "Int Value",
         description="A integer property",
@@ -125,10 +129,17 @@ class MyProperties(PropertyGroup):
         pipeline = import_file(mytool.my_lammpsfile, sort_particles=True)
         nframes = pipeline.source.num_frames
         mytool.number_of_lammps_frames = nframes
-
         bpy.context.scene.frame_end = nframes * mytool.my_lammps_frame_stride
-
         mytool.valid_lammps_file = True
+
+        data=pipeline.compute()
+        props = list(data.particles.keys())
+        
+        scene.my_list.clear()
+        for prop in props:
+            item  = scene.my_list.add()
+            item.name = prop
+
 
     my_lammpsfile: StringProperty(
         name = "LAMMPS Dump File",
@@ -295,11 +306,19 @@ class WM_OT_RenderAnimation(Operator):
     bl_label = "Render animation"
     def execute(self, context):
         scene = bpy.context.scene
+
+        # Remove shape keyframes if there are any
+        ob = bpy.data.objects['MD_Object']
+        if ob.data.shape_keys:
+            for key in ob.data.shape_keys.key_blocks:
+                ob.shape_key_remove(key)
+
+        pipeline = startOvito()
         for frame in range(scene.frame_start, scene.frame_end + 1):
             print("Rendering ",frame)
             scene.render.filepath = scene.my_tool.my_renderpath + str(frame).zfill(4)
             scene.frame_set(frame)
-            loadUpdatedData()
+            loadUpdatedData(pipeline)
             bpy.ops.render.render(write_still=True)
 
         return {'FINISHED'}
@@ -343,7 +362,7 @@ class OBJECT_PT_bleMDPanel(Panel):
         mytool = scene.my_tool
 
         layout.prop(mytool, "my_bool")
-        layout.prop(mytool, "update_on_frame_change")
+        #layout.prop(mytool, "update_on_frame_change")
 
         layout.prop(mytool, "my_lammpsfile")
         layout.prop(mytool, "my_ovitodir")
@@ -366,8 +385,101 @@ class OBJECT_PT_bleMDPanel(Panel):
         layout.operator("wm.render_animation")
         layout.operator("wm.rig_keyframes")
 
+        col = layout.column()
+        box = col.box()
+        box.prop(mytool,"particle_properties")
         
+        row = layout.row()
+        row.template_list("MY_UL_List", "The_List", scene,
+                          "my_list", scene, "list_index")
+
         obj = context.object
+
+
+
+
+
+
+
+
+
+
+
+
+
+class ParticleProperty(PropertyGroup):
+    """Group of properties representing an item in the list."""
+
+    name: StringProperty(
+           name="Name",
+           description="Property",
+           default="Untitled")
+
+    enable: BoolProperty(
+           name="Enable",
+           description="Include as a coloring property")
+
+
+class MY_UL_List(UIList):
+    """Demo UIList."""
+
+    def draw_item(self, context, layout, data, item, icon, active_data,
+                  active_propname, index):
+
+        # We could write some code to decide which icon to use here...
+        custom_icon = 'OBJECT_DATAMODE'
+
+        # Make sure your code supports all 3 layout types
+        if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            layout.label(text=item.name, icon = custom_icon)
+            layout.prop(item,"enable")
+
+        elif self.layout_type in {'GRID'}:
+            layout.alignment = 'CENTER'
+            layout.label(text="", icon = custom_icon)
+
+
+class LIST_OT_NewItem(Operator):
+    """Add a new item to the list."""
+
+    bl_idname = "my_list.new_item"
+    bl_label = "Add a new item"
+
+    def execute(self, context):
+        item  = context.scene.my_list.add()
+        item.name = "Hello"
+        print(item)
+        #context.scene.my_list.clear()
+
+        return{'FINISHED'}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def frame_handler(scene, depsgraph):
+    if bpy.context.scene.my_tool.update_on_frame_change:
+        loadUpdatedData()
+
+    print(bpy.data.scenes[0].frame_current)
+
+
 
 # ------------------------------------------------------------------------
 #    Registration
@@ -383,13 +495,15 @@ classes = (
 #    MessageBox,
 #    BasicMenu,
 #    MATERIAL_UL_matslots_example,
+#    uilist.MATERIAL_UL_matslots_example,
+#    uilist.UIListPanelExample1,
+    ParticleProperty,
+    MY_UL_List,
+    LIST_OT_NewItem,
+#    PT_ListExample,
 )
 
-def frame_handler(scene, depsgraph):
-    if bpy.context.scene.my_tool.update_on_frame_change:
-        loadUpdatedData()
 
-    print(bpy.data.scenes[0].frame_current)
 
 
 def register():
