@@ -33,9 +33,6 @@ bl_info = {
 
 import bpy
 
-import sys
-sys.path.append("/home/brunnels/Research/bleMD/")
-import uilist
 
 from bpy.props import (StringProperty,
                        BoolProperty,
@@ -55,7 +52,7 @@ from bpy.types import (Panel,
                        )
 
 
-import ovito
+#import ovito
 
 
 # ------------------------------------------------------------------------
