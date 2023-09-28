@@ -167,7 +167,10 @@ class MyProperties(PropertyGroup):
         name="OVITO Unwrap Trajectories",
         default = False)
 
-
+#
+# KEY SUBROUTINE 1/2
+# Opens Ovito and does basic communication with dump fil
+#
 def startOvito():
     filename = bpy.context.scene.my_tool.my_lammpsfile
     interp = bpy.context.scene.my_tool.my_lammps_frame_stride
@@ -176,19 +179,30 @@ def startOvito():
     from ovito.modifiers import UnwrapTrajectoriesModifier
     from ovito.modifiers import WrapPeriodicImagesModifier
 
+    # Load pipeline from ovito
     pipeline = import_file(filename, sort_particles=True)
+    
+    # Check if checkboxes are ticked in the panel
+    # If so, apply the appropriate modifier to the ovito
+    # pipeline
     if bpy.context.scene.my_tool.ovito_wrap_periodic_images:
         pipeline.modifiers.append(WrapPeriodicImagesModifier())
     if bpy.context.scene.my_tool.ovito_unwrap_trajectories:
         pipeline.modifiers.append(UnwrapTrajectoriesModifier())
 
+    # Note the number of timestep dumps 
     nframes = pipeline.source.num_frames
     bpy.context.scene.my_tool.number_of_lammps_frames = nframes
 
     return pipeline
     
-
+#
+# KEY SUBROUTINE 2/2
+# Updates the current data based on the Blender timestep
+#
 def loadUpdatedData(pipeline):
+    # Determine what the frame (or frames if interpolating)
+    # are that need to be pulled from
     frame = bpy.data.scenes[0].frame_current
     interp = bpy.context.scene.my_tool.my_lammps_frame_stride
 
@@ -200,15 +214,20 @@ def loadUpdatedData(pipeline):
     print("frame_lo ",frame_lo)
 
     # Set up the object or grab the existing object
+    # TODO: how do we handle multiple objects?
     if not "MD_Object" in bpy.data.objects.keys():
+        # Object does not yet exist: create it
         me = bpy.data.meshes.new("MD_Mesh")
         ob = bpy.data.objects.new("MD_Object", me)
         ob.show_name = True
         bpy.context.collection.objects.link(ob)
     else:
+        # Object exists: use it
         ob = bpy.data.objects['MD_Object']
         me = ob.data
 
+    # Update the data - storing the appropriate Ovito data
+    # in python data structure, but no updates yet.
     attrs = {}
     if fac == 0:
         data = pipeline.compute(frame_lo)
@@ -231,19 +250,30 @@ def loadUpdatedData(pipeline):
         #c_csym = [(1-fac)*x_lo + fac*x_hi for x_lo,x_hi in zip(data_lo.particles['c_csym'], data_hi.particles['c_csym'])]
 
     if not len(me.vertices):
+        # Do this if the object has not been created yet
+        # This line actually creates all the points
         me.from_pydata(coords,[],[])
+        # Now, we go through the properties that were selected in the panel
+        # and set each of those properties as attributes
         for prop in bpy.context.scene.my_list:
             if prop.enable and prop.editable:
                 attr = me.attributes.new(prop.name,'FLOAT','POINT')
                 attr.data.foreach_set("value",attrs[prop.name])
     else:
+        # We do this if we are just updating the positions and properties,
+        # not creating
+        
+        # For some reason we have to do this in order to update the mesh
+        # vertex locations. There doesn't appear to be a handy blender 
+        # routine to do this automatically
         for i,v in enumerate(me.vertices):
             new_location = v.co            
             new_location[0] = coords[i][0]
             new_location[1] = coords[i][1]
             new_location[2] = coords[i][2]
             v.co = new_location
-            
+        
+        # Here we update the properties (e.g. c_csym)
         for prop in bpy.context.scene.my_list:
             if prop.enable and prop.editable:
                 if not prop.name in me.attributes.keys():
