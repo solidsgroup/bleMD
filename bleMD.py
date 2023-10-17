@@ -129,12 +129,13 @@ class MyProperties(PropertyGroup):
             if prop == "Position":
                 item.enable=True
                 item.editable=False
+                
 
 
     my_lammpsfile: StringProperty(
         name = "LAMMPS Dump File",
         description="Choose a file:",
-        default="",
+        default="/home/jackson/Desktop/",
         maxlen=1024,
         subtype='FILE_PATH',
         update=openLAMMPSFile,
@@ -143,7 +144,7 @@ class MyProperties(PropertyGroup):
     my_ovitodir: StringProperty(
         name = "OVITO Directory",
         description="Choose a file:",
-        default="/home/brunnels/.local/lib/python3.10/site-packages/",
+        default="/home/jackson/.local/lib/python3.10/site-packages/",
         maxlen=1024,
         subtype='DIR_PATH'
         )
@@ -284,6 +285,8 @@ def loadUpdatedData(pipeline):
 
     me.update()
     
+    # Call setup function - Jackson
+    setup()
 
 
 # ------------------------------------------------------------------------
@@ -562,6 +565,52 @@ def unregister():
         unregister_class(cls)
     del bpy.types.Scene.my_tool
 
+#
+# Jackson messing around with automatically setting up geonode environment
+#
+
+def create_geonodes():
+	obj = bpy.data.objects["MD_Object"]
+	geo_nodes = obj.modifiers.new("build_geonode", "NODES")
+
+	node_group = create_group()
+	geo_nodes.node_group = node_group
+	
+
+def create_group(name = "geonode_object"):
+    group = bpy.data.node_groups.get(name)
+    # if the group already exists, return it and don't create a new one
+    if group:
+        pass
+    
+    # create a new group for this particular name and do some initial setup
+    group = bpy.data.node_groups.new(name, 'GeometryNodeTree')
+    group.inputs.new('NodeSocketGeometry', "Geometry")
+    group.outputs.new('NodeSocketGeometry', "Geometry")
+    input_node = group.nodes.new('NodeGroupInput')
+    output_node = group.nodes.new('NodeGroupOutput')
+    output_node.is_active_output = True
+    input_node.location.x = -300
+    output_node.location.x = 350
+    
+    
+    mesh_to_points = group.nodes.new('GeometryNodeMeshToPoints')
+    set_material = group.nodes.new('GeometryNodeSetMaterial')
+    mesh_to_points.location.x = -75
+    set_material.location.x = 125
+    
+    bpy.data.node_groups[name].nodes["Mesh to Points"].inputs[3].default_value = 1
+    
+    group.links.new(input_node.outputs[0], mesh_to_points.inputs[0])
+    group.links.new(mesh_to_points.outputs[0], set_material.inputs[0])
+    group.links.new(set_material.outputs[0], output_node.inputs[0])
+    
+    return group
+    
+def setup():
+	create_geonodes()
+	for scene in bpy.data.scenes:
+		scene.render.engine = 'CYCLES'
 
 
 
