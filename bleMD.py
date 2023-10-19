@@ -614,14 +614,6 @@ def create_material():
 	obj.data.materials.append(mat)
 	mat.use_nodes = True
 	
-	nodes = mat.node_tree.nodes
-	links = mat.node_tree.links
-	output = nodes.new(type='ShaderNodeOutputMaterial')
-	
-	shader = nodes.new(type='ShaderNodeBsdfDiffuse')
-	links.new(shader.outputs[0], output.inputs[0])
-
-
     
 def setup():
 	create_material()
