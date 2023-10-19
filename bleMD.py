@@ -571,6 +571,7 @@ def unregister():
 
 def create_geonodes():
 	obj = bpy.data.objects["MD_Object"]
+	
 	geo_nodes = obj.modifiers.new("build_geonode", "NODES")
 
 	node_group = create_group()
@@ -581,7 +582,7 @@ def create_group(name = "geonode_object"):
     group = bpy.data.node_groups.get(name)
     # if the group already exists, return it and don't create a new one
     if group:
-        pass
+        return
     
     # create a new group for this particular name and do some initial setup
     group = bpy.data.node_groups.new(name, 'GeometryNodeTree')
@@ -607,7 +608,23 @@ def create_group(name = "geonode_object"):
     
     return group
     
+def create_material():
+	mat = bpy.data.materials.new("my_mat")
+	obj = bpy.data.objects["MD_Object"]
+	obj.data.materials.append(mat)
+	mat.use_nodes = True
+	
+	nodes = mat.node_tree.nodes
+	links = mat.node_tree.links
+	output = nodes.new(type='ShaderNodeOutputMaterial')
+	
+	shader = nodes.new(type='ShaderNodeBsdfDiffuse')
+	links.new(shader.outputs[0], output.inputs[0])
+
+
+    
 def setup():
+	create_material()
 	create_geonodes()
 	for scene in bpy.data.scenes:
 		scene.render.engine = 'CYCLES'
