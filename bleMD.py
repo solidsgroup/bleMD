@@ -144,7 +144,7 @@ class MyProperties(PropertyGroup):
     my_ovitodir: StringProperty(
         name = "OVITO Directory",
         description="Choose a file:",
-        default="/home/jackson/.local/lib/python3.10/site-packages/",
+        default="/home/jackplum/.local/lib/python3.10/site-packages/",
         maxlen=1024,
         subtype='DIR_PATH'
         )
@@ -156,7 +156,19 @@ class MyProperties(PropertyGroup):
         maxlen=1024,
         subtype='DIR_PATH'
         )
-
+        
+        
+    '''Under construction
+    
+    my_shader: StringProperty(
+        name = "Select shader data",
+        description="Type in desired data field to shade by:",
+        default="c_csym",
+        maxlen=1024,
+        subtype='NONE',
+        )       
+        
+	'''
 
     #
     # Ovito Modifiers
@@ -167,6 +179,7 @@ class MyProperties(PropertyGroup):
     ovito_unwrap_trajectories: BoolProperty(
         name="OVITO Unwrap Trajectories",
         default = False)
+        
 
 #
 # KEY SUBROUTINE 1/2
@@ -431,6 +444,13 @@ class OBJECT_PT_bleMDPanel(Panel):
                               "my_list", scene, "list_index")
 
         layout.operator("wm.read_lammps_file")
+        
+        '''Under Construction
+        
+        layout.label(text="Basic Shader",)
+        layout.prop(mytool, "my_shader")
+
+		'''
 
         layout.label(text="Animation")
 
@@ -566,7 +586,9 @@ def unregister():
     del bpy.types.Scene.my_tool
 
 #
+#
 # Jackson messing around with automatically setting up geonode environment
+#
 #
 
 def create_geonodes():
@@ -580,11 +602,10 @@ def create_geonodes():
 
 def create_group(name = "geonode_object"):
     group = bpy.data.node_groups.get(name)
-    # if the group already exists, return it and don't create a new one
+    # check if a group already exists
     if group:
         return
-    
-    # create a new group for this particular name and do some initial setup
+
     group = bpy.data.node_groups.new(name, 'GeometryNodeTree')
     group.inputs.new('NodeSocketGeometry', "Geometry")
     group.outputs.new('NodeSocketGeometry', "Geometry")
@@ -601,6 +622,8 @@ def create_group(name = "geonode_object"):
     set_material.location.x = 125
     
     bpy.data.node_groups[name].nodes["Mesh to Points"].inputs[3].default_value = 1
+    bpy.data.node_groups["geonode_object"].nodes["Set Material"].inputs[2].default_value = bpy.data.materials["my_mat"]
+
     
     group.links.new(input_node.outputs[0], mesh_to_points.inputs[0])
     group.links.new(mesh_to_points.outputs[0], set_material.inputs[0])
@@ -612,16 +635,42 @@ def create_material():
 	mat = bpy.data.materials.new("my_mat")
 	obj = bpy.data.objects["MD_Object"]
 	obj.data.materials.append(mat)
-	mat.use_nodes = True
 	
+	mat.use_nodes = True
+	mat_nodes = mat.node_tree.nodes
+	material_output = mat.node_tree.nodes.get('Material Output')
+	default_BSDF = mat.node_tree.nodes.get('Principled BSDF')
+	mat.node_tree.nodes.remove(default_BSDF)
+	
+	principled = mat.node_tree.nodes.new('ShaderNodeBsdfPrincipled')
+	principled.location.y = 350
+	
+	attribute = mat_nodes.new('ShaderNodeAttribute')
+	attribute.location = (-550, 250)	
+	
+	color_ramp = mat_nodes.new('ShaderNodeValToRGB')
+	color_ramp.location = (-350, 250)
+	
+	mat.node_tree.links.new(attribute.outputs[2], color_ramp.inputs[0])
+	mat.node_tree.links.new(color_ramp.outputs[0], principled.inputs[0])
+	mat.node_tree.links.new(principled.outputs[0], material_output.inputs[0])
+	
+
     
 def setup():
 	create_material()
 	create_geonodes()
+	#updateDefaultShader()
 	for scene in bpy.data.scenes:
 		scene.render.engine = 'CYCLES'
 
+''' Not functional
 
+def updateDefaultShader():
+	bpy.data.materials["my_mat"].node_tree.nodes["Attribute"].attribute_name = myshader
+	return myshader
+	
+'''
 
 if __name__ == "__main__":
     import bpy
