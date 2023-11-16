@@ -154,8 +154,21 @@ class MyProperties(PropertyGroup):
     my_shader: StringProperty(
         name="Select shader data",
         description="Type in desired data field to shade by:",
+        default="c_csym",
         maxlen=1024,
         subtype='NONE'
+    )
+    
+    my_normalhigh: FloatProperty(
+        name="Data Max (for normalization)",
+        description="Insert maximum value to shade by",
+        default=1,
+    )
+    
+    my_normallow: FloatProperty(
+        name="Data Min (for normalization)",
+        description="Insert minimum value to shade by",
+        default=0,
     )
 
     #
@@ -446,7 +459,9 @@ class OBJECT_PT_bleMDPanel(Panel):
 
         layout.label(text="Basic Shader",)
         layout.prop(mytool, "my_shader")
-
+        layout.prop(mytool, "my_normalhigh")
+        layout.prop(mytool, "my_normallow")
+        
         layout.operator("wm.basic_shade")
 
         layout.label(text="Animation")
@@ -568,6 +583,7 @@ def unregister():
         unregister_class(cls)
     del bpy.types.Scene.my_tool
 
+
 #
 #
 # Jackson messing around with automatically setting up geonode environment
@@ -577,7 +593,11 @@ def unregister():
 
 def create_geonodes():
     obj = bpy.data.objects["MD_Object"]
-
+        
+    geo_nodes = obj.modifiers.get("build_geonode")
+    if geo_nodes:
+        return
+        
     geo_nodes = obj.modifiers.new("build_geonode", "NODES")
 
     node_group = create_group()
@@ -591,8 +611,11 @@ def create_group(name="geonode_object"):
         return
 
     group = bpy.data.node_groups.new(name, 'GeometryNodeTree')
-    group.inputs.new('NodeSocketGeometry', "Geometry")
-    group.outputs.new('NodeSocketGeometry', "Geometry")
+    #group.inputs.new('NodeSocketGeometry', "Geometry")
+    #group.outputs.new('NodeSocketGeometry', "Geometry")
+    group.interface.new_socket('My Output',in_out='INPUT',socket_type='NodeSocketGeometry')
+    group.interface.new_socket('My Input',in_out='OUTPUT',socket_type='NodeSocketGeometry')
+    
     input_node = group.nodes.new('NodeGroupInput')
     output_node = group.nodes.new('NodeGroupOutput')
     output_node.is_active_output = True
@@ -615,6 +638,10 @@ def create_group(name="geonode_object"):
 
 
 def create_material():
+    mat = bpy.data.materials.get("my_mat")
+    if mat:
+        return
+        
     mat = bpy.data.materials.new("my_mat")
     obj = bpy.data.objects["MD_Object"]
     obj.data.materials.append(mat)
@@ -629,19 +656,37 @@ def create_material():
     principled.location.y = 350
 
     attribute = mat_nodes.new('ShaderNodeAttribute')
-    attribute.location = (-550, 250)
-
+    attribute.location = (-900, 250)
+    
+    Math1 = mat_nodes.new('ShaderNodeMath',)
+    Math1.location = (-700, 250)
+    bpy.data.materials["my_mat"].node_tree.nodes["Math"].operation = 'SUBTRACT'
+    Math2 = mat_nodes.new('ShaderNodeMath',)    
+    Math2.location = (-550, 250)
+    bpy.data.materials["my_mat"].node_tree.nodes["Math.001"].operation = 'DIVIDE'
+        
     color_ramp = mat_nodes.new('ShaderNodeValToRGB')
     color_ramp.location = (-350, 250)
 
-    mat.node_tree.links.new(attribute.outputs[2], color_ramp.inputs[0])
+    mat.node_tree.links.new(attribute.outputs[2], Math1.inputs[0])
+    mat.node_tree.links.new(Math1.outputs[0], Math2.inputs[0])
+    mat.node_tree.links.new(Math2.outputs[0], color_ramp.inputs[0])
     mat.node_tree.links.new(color_ramp.outputs[0], principled.inputs[0])
     mat.node_tree.links.new(principled.outputs[0], material_output.inputs[0])
     
     
 def updateDefaultShader():
     my_shader = bpy.context.scene.my_tool.my_shader
+    my_normallow = bpy.context.scene.my_tool.my_normalhigh
+    my_normalhigh = bpy.context.scene.my_tool.my_normallow
+    my_range = my_normalhigh - my_normallow
+    
     bpy.data.materials["my_mat"].node_tree.nodes["Attribute"].attribute_name = my_shader
+    
+    bpy.data.materials["my_mat"].node_tree.nodes["Math"].inputs[1].default_value = my_normallow
+    bpy.data.materials["my_mat"].node_tree.nodes["Math.001"].inputs[1].default_value = my_range
+
+    
     return my_shader
 
 
@@ -649,21 +694,7 @@ def setup():
     create_material()
     create_geonodes()
     for scene in bpy.data.scenes:
-        scene.render.engine = 'CYCLES'
-
-# pseudocode
-def normalize(dataname):
-  data = getmy.dataname
-  maxval = max(data)
-  minval = min(data)
-  rangeval = range(data)
-  
-  n = 0
-  for x in data:
-    i = (x - min) / (range)
-    data[n] = i
-    n += 1
-        
+        scene.render.engine = 'CYCLES'   
 
 
 
