@@ -677,8 +677,8 @@ def create_material():
     
 def updateDefaultShader():
     my_shader = bpy.context.scene.my_tool.my_shader
-    my_normallow = bpy.context.scene.my_tool.my_normalhigh
-    my_normalhigh = bpy.context.scene.my_tool.my_normallow
+    my_normalhigh = bpy.context.scene.my_tool.my_normalhigh
+    my_normallow = bpy.context.scene.my_tool.my_normallow
     my_range = my_normalhigh - my_normallow
     
     bpy.data.materials["my_mat"].node_tree.nodes["Attribute"].attribute_name = my_shader
