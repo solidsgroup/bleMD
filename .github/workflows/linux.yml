@@ -1,0 +1,16 @@
+name: Linux
+
+on: [push, pull_request]
+
+jobs:
+  blender-ubuntu-20.04:
+    name: 2D Build & Test (20.04)
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: installing preliminaries
+      run: sudo ap install blender
+    - name: package add-on
+      run: make
+    - name: install blender plugin
+      run: blener -b --python scripts/install.py

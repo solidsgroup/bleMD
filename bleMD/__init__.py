@@ -1,3 +1,14 @@
+bl_info = {
+    "name": "bleMD",
+    "description": "Visualize MD data with Ovito plugins",
+    "author": "brunnels",
+    "version": (0, 0, 0),
+    "blender": (4, 0, 0),
+    "location": "3D View > Tools",
+    "warning": "",  # used for warning icon and text in addons panel
+    "category": "Generic"
+}
+
 from bpy.types import (Panel,
                        Menu,
                        Operator,
@@ -15,41 +26,7 @@ from bpy.props import (StringProperty,
                        CollectionProperty,
                        )
 import bpy
-bl_info = {
-    "name": "Add-on Template",
-    "description": "",
-    "author": "p2or",
-    "version": (0, 0, 3),
-    "blender": (2, 80, 0),
-    "location": "3D View > Tools",
-    "warning": "",  # used for warning icon and text in addons panel
-    "wiki_url": "",
-    "tracker_url": "",
-    "category": "Development"
-}
 
-# --- this works, do not change it !! ---
-#### import bpy
-#### import pip
-#### import sys
-# print(sys.executable)
-# sys.path.append('/home/brunnels/.local/lib/python3.10/site-packages/') ## Portability issue - need to overcome this
-#### import ovito
-#### from ovito.io import import_file
-#### pipeline = import_file("/home/brunnels/Desktop/MDVisualization/dump.Cu_s21_inc33.004490_dE_0_v0.01_T900_freeends")
-# for frame in range(pipeline.source.num_frames):
-####     data = pipeline.compute(frame)
-####     coords = [list(xyz) for xyz in data.particles.positions]
-####     print("frame = {} of {}".format(frame,pipeline.source.num_frames))
-####     me = bpy.data.meshes.new("MD_Mesh")
-####     ob = bpy.data.objects.new("MD_Object", me)
-####     ob.show_name = True
-# bpy.context.collection.objects.link(ob)
-# me.from_pydata(coords,[],[])
-# me.update()
-
-
-#import ovito
 
 
 # ------------------------------------------------------------------------
@@ -105,8 +82,6 @@ class MyProperties(PropertyGroup):
         scene = context.scene
         mytool = scene.my_tool
 
-        #import sys
-        #sys.path.append(mytool.my_ovitodir)
         import ovito
         from ovito.io import import_file
         pipeline = import_file(mytool.my_lammpsfile, sort_particles=True)
@@ -133,14 +108,6 @@ class MyProperties(PropertyGroup):
         maxlen=1024,
         subtype='FILE_PATH',
         update=openLAMMPSFile,
-    )
-
-    my_ovitodir: StringProperty(
-        name="OVITO Directory",
-        description="Choose a file:",
-        default="/home/jackplum/.local/lib/python3.10/site-packages/",
-        maxlen=1024,
-        subtype='DIR_PATH'
     )
 
     my_renderpath: StringProperty(
@@ -438,8 +405,6 @@ class OBJECT_PT_bleMDPanel(Panel):
         layout = self.layout
         scene = context.scene
         mytool = scene.my_tool
-
-        layout.prop(mytool, "my_ovitodir")
 
         layout.label(text="Input file")
         layout.prop(mytool, "my_lammpsfile")
