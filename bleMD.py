@@ -564,21 +564,8 @@ classes = (
 
 def installOvito():
     import pip
-    pip.main(['install', 'ovito', '--user'])
 
-    # import subprocess
-    # import sys
-    # import os
- 
-    # python_exe = sys.executable #os.path.join(sys.prefix, 'bin', 'python.exe')
-    # print("python exectuable ",python_exe)
-    # target = os.path.join(sys.prefix, 'lib', 'site-packages')
-    # print("target=",target)
- 
-    # subprocess.call([python_exe, '-m', 'ensurepip'])
-    # subprocess.call([python_exe, '-m', 'pip', 'install', '--upgrade', 'pip'])
- 
-    # subprocess.call([python_exe, '-m', 'pip', 'install', '--upgrade', 'ovito']) #, '-t', target])
+    pip.main(['install', 'ovito'])
 
     import ovito
  
