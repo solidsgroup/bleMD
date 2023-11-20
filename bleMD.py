@@ -105,8 +105,8 @@ class MyProperties(PropertyGroup):
         scene = context.scene
         mytool = scene.my_tool
 
-        import sys
-        sys.path.append(mytool.my_ovitodir)
+        #import sys
+        #sys.path.append(mytool.my_ovitodir)
         import ovito
         from ovito.io import import_file
         pipeline = import_file(mytool.my_lammpsfile, sort_particles=True)
@@ -561,20 +561,45 @@ classes = (
 )
 
 
+
+def installOvito():
+    import pip
+    pip.main(['install', 'ovito', '--user'])
+
+    # import subprocess
+    # import sys
+    # import os
+ 
+    # python_exe = sys.executable #os.path.join(sys.prefix, 'bin', 'python.exe')
+    # print("python exectuable ",python_exe)
+    # target = os.path.join(sys.prefix, 'lib', 'site-packages')
+    # print("target=",target)
+ 
+    # subprocess.call([python_exe, '-m', 'ensurepip'])
+    # subprocess.call([python_exe, '-m', 'pip', 'install', '--upgrade', 'pip'])
+ 
+    # subprocess.call([python_exe, '-m', 'pip', 'install', '--upgrade', 'ovito']) #, '-t', target])
+
+    import ovito
+ 
+print('FINISHED')
+
 def register():
     from bpy.utils import register_class
     for cls in classes:
         register_class(cls)
 
     bpy.app.handlers.frame_change_post.clear()
-    # bpy.app.handlers.frame_change_post.append(frame_handler)
 
     bpy.types.Scene.my_tool = PointerProperty(type=MyProperties)
 
-    print("He")
     bpy.types.Scene.my_list = CollectionProperty(type=ParticleProperty)
     bpy.types.Scene.list_index = IntProperty(
         name="Index for my_list", default=0)
+
+
+    installOvito()
+
 
 
 def unregister():
@@ -696,7 +721,7 @@ def setup():
     for scene in bpy.data.scenes:
         scene.render.engine = 'CYCLES'   
 
-
+    print("Hello")
 
 
 if __name__ == "__main__":
