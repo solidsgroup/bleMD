@@ -9,7 +9,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: installing preliminaries
-      run: sudo ap install blender
+      run: sudo apt install blender
     - name: package add-on
       run: make
     - name: install blender plugin
