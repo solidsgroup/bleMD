@@ -3,7 +3,7 @@ name: Linux
 on: [push, pull_request]
 
 jobs:
-  blender-ubuntu-20.04:
+  blender-ubuntu-20_04:
     name: 2D Build & Test (20.04)
     runs-on: ubuntu-20.04
     steps:
