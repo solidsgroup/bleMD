@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   ubuntu-20_04--blender_default:
-    name: Ubuntu 20.04 Default Apt Install Blender
+    name: Ubuntu 20.04 Blender Default (Apt)
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
@@ -12,6 +12,8 @@ jobs:
       run: sudo apt install blender python3 libegl1 libopengl0
     - name: installing ovito with pip
       run: sudo python3 -m pip install ovito
+    - name: check ovito install
+      run: python3 -s "import ovito"
     - name: package add-on
       run: make
     - name: install blender plugin
@@ -27,6 +29,8 @@ jobs:
       run: sudo snap install blender --channel=4.0/stable --classic
     - name: installing ovito with pip
       run: sudo python3 -m pip install ovito
+    - name: check ovito install
+      run: python3 -s "import ovito"
     - name: package add-on
       run: make
     - name: install blender plugin
