@@ -40,31 +40,43 @@ from . bleMDDataFieldList import *
 def startOvito():
     filename = bpy.context.scene.bleMD_props.lammpsfile
     interp = bpy.context.scene.bleMD_props.lammps_frame_stride
+    scene = bpy.context.scene
+    mytool = scene.bleMD_props
 
 
+    #
+    # Load the file
+    #
     from ovito.io import import_file
     pipeline = import_file(filename, sort_particles=True)
 
 
+    #
+    # Execute User's Ovito Python script if applicable
+    #
     if "Ovito" in bpy.data.texts.keys():
         exec(bpy.data.texts['Ovito'].as_string())
     
-    #from ovito.modifiers import UnwrapTrajectoriesModifier
-    #from ovito.modifiers import WrapPeriodicImagesModifier
-
-    # Load pipeline from ovito
-
-    # Check if checkboxes are ticked in the panel
-    # If so, apply the appropriate modifier to the ovito
-    # pipeline
-    #if bpy.context.scene.bleMD_props.ovito_wrap_periodic_images:
-    #    pipeline.modifiers.append(WrapPeriodicImagesModifier())
-    #if bpy.context.scene.bleMD_props.ovito_unwrap_trajectories:
-    #    pipeline.modifiers.append(UnwrapTrajectoriesModifier())
-
-    # Note the number of timestep dumps
+    #
+    # Adjust number of frames 
+    #
     nframes = pipeline.source.num_frames
-    bpy.context.scene.bleMD_props.number_of_lammps_frames = nframes
+    mytool.number_of_lammps_frames = nframes
+    bpy.context.scene.frame_end = nframes * mytool.lammps_frame_stride
+    mytool.valid_lammps_file = True
+
+    #
+    # Populate the properties list
+    #
+    data = pipeline.compute()
+    props = list(data.particles.keys())
+    scene.datafieldlist.clear()
+    for prop in props:
+        item = scene.datafieldlist.add()
+        item.name = prop
+        if prop == "Position":
+            item.enable = True
+            item.editable = False
 
     return pipeline
 

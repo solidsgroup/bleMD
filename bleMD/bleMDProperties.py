@@ -59,27 +59,8 @@ class bleMDProperties(bpy.types.PropertyGroup):
     )
 
     def openLAMMPSFile(self, context):
-        scene = context.scene
-        mytool = scene.bleMD_props
+        startOvito()
 
-        import ovito
-        from ovito.io import import_file
-        pipeline = import_file(mytool.lammpsfile, sort_particles=True)
-        nframes = pipeline.source.num_frames
-        mytool.number_of_lammps_frames = nframes
-        bpy.context.scene.frame_end = nframes * mytool.lammps_frame_stride
-        mytool.valid_lammps_file = True
-
-        data = pipeline.compute()
-        props = list(data.particles.keys())
-
-        scene.datafieldlist.clear()
-        for prop in props:
-            item = scene.datafieldlist.add()
-            item.name = prop
-            if prop == "Position":
-                item.enable = True
-                item.editable = False
 
     lammpsfile: StringProperty(
         name="LAMMPS Dump File",
