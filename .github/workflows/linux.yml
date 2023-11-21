@@ -4,15 +4,33 @@ on: [push, pull_request]
 
 jobs:
   blender-ubuntu-20_04:
-    name: Ubuntu 20.04 Default Blender
+    name: Ubuntu 20.04 Default Apt Install Blender
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - name: installing preliminaries
-      run: sudo apt install blender python3 libegl1
+      run: sudo apt install blender python3 libegl1 libopengl0
     - name: installing ovito with pip
       run: sudo python3 -m pip install ovito
     - name: package add-on
       run: make
     - name: install blender plugin
       run: python3 scripts/wrapper.py blender -b --python scripts/install.py --python-exit-code 1
+
+  blender-ubuntu-20_04:
+    name: Ubuntu 20.04 Blender 4.0
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: installing preliminaries
+      run: sudo apt install blender python3 libegl1 libopengl0
+    - name: install blender 4.0 from snap
+      run: sudo snap install blender --channel=4.0/stable --classic
+    - name: installing ovito with pip
+      run: sudo python3 -m pip install ovito
+    - name: package add-on
+      run: make
+    - name: install blender plugin
+      run: python3 scripts/wrapper.py blender -b --python scripts/install.py --python-exit-code 1
+
+
