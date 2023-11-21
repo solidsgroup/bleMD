@@ -9,8 +9,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: installing preliminaries
-      run: sudo apt install blender
+      run: sudo apt install blender python3
     - name: package add-on
       run: make
     - name: install blender plugin
-      run: blender -b --python scripts/install.py --python-exit-code 1
+      run: python3 scripts/wrapper.py blender -b --python scripts/install.py --python-exit-code 1
