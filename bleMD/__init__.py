@@ -317,6 +317,7 @@ class OBJECT_PT_bleMDPanel(Panel):
     bl_region_type = "WINDOW"
     bl_context = "object"
 
+
     @classmethod
     def poll(self, context):
         return context.object is not None
@@ -324,6 +325,9 @@ class OBJECT_PT_bleMDPanel(Panel):
     def execute(self, context):
         return {'FINISHED'}
 
+    def draw_header(self, context):
+        self.layout.label(text="", icon_value=custom_icons["ovito"].icon_id)
+        
     def draw(self, context):
         layout = self.layout
         scene = context.scene
@@ -399,6 +403,7 @@ def installOvito():
 print('FINISHED')
 
 def register():
+    import bpy
     from bpy.utils import register_class
     for cls in classes:
         register_class(cls)
@@ -413,7 +418,14 @@ def register():
 
 
     installOvito()
-
+    
+    import bpy.utils.previews
+    global custom_icons
+    custom_icons = bpy.utils.previews.new()
+    import os
+    ## this will work for addons 
+    icons_dir = os.path.join(os.path.dirname(__file__), "resources")
+    custom_icons.load("ovito", os.path.join(icons_dir, "ovito.png"), 'IMAGE')
 
 
 def unregister():
