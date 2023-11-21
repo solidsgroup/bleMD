@@ -37,12 +37,11 @@ from . bleMDDataFieldList import *
 # KEY SUBROUTINE 1/2
 # Opens Ovito and does basic communication with dump fil
 #
-def startOvito():
+def startOvito(hardrefresh=False):
     filename = bpy.context.scene.bleMD_props.lammpsfile
     interp = bpy.context.scene.bleMD_props.lammps_frame_stride
     scene = bpy.context.scene
     mytool = scene.bleMD_props
-
 
     #
     # Load the file
@@ -70,13 +69,16 @@ def startOvito():
     #
     data = pipeline.compute()
     props = list(data.particles.keys())
-    scene.datafieldlist.clear()
+    if hardrefresh:
+        scene.datafieldlist.clear()
+    
     for prop in props:
-        item = scene.datafieldlist.add()
-        item.name = prop
-        if prop == "Position":
-            item.enable = True
-            item.editable = False
+        if prop not in [i.name for i in scene.datafieldlist]:
+            item = scene.datafieldlist.add()
+            item.name = prop
+            if prop == "Position":
+                item.enable = True
+                item.editable = False
 
     return pipeline
 

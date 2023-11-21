@@ -59,7 +59,7 @@ class bleMDProperties(bpy.types.PropertyGroup):
     )
 
     def openLAMMPSFile(self, context):
-        startOvito()
+        startOvito(hardrefresh=True)
 
 
     lammpsfile: StringProperty(
