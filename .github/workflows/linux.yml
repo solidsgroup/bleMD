@@ -13,4 +13,4 @@ jobs:
     - name: package add-on
       run: make
     - name: install blender plugin
-      run: blender -b --python scripts/install.py
+      run: bash .github/workflows/blender_install.sh

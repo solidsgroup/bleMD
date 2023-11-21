@@ -22,6 +22,10 @@ def resetDefaultsForMD():
                     if space.type == "VIEW_3D":
                         space.clip_end = 100000000000
 
+    # Set up the World to 
+    bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (1, 1, 1, 1)
+
+
 #
 # KEY SUBROUTINE 1/2
 # Opens Ovito and does basic communication with dump fil
