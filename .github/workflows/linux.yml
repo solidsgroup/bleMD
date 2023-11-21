@@ -10,6 +10,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: installing preliminaries
       run: sudo apt install blender python3
+    - name: installing ovito with pip
       run: sudo python3 -m pip install ovito
     - name: package add-on
       run: make
