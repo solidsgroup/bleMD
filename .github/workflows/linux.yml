@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   blender-ubuntu-20_04:
-    name: 2D Build & Test (20.04)
+    name: Ubuntu 20.04 Default Blender
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
@@ -13,4 +13,4 @@ jobs:
     - name: package add-on
       run: make
     - name: install blender plugin
-      run: bash .github/workflows/blender_install.sh
+      run: blender -b --python scripts/install.py --python-exit-code 1
