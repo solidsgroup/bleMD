@@ -4,7 +4,7 @@ import sys
 try:
     output = subprocess.check_output(sys.argv[1:])
     print(output.decode('ascii'))
-    if not "---successful completion---" in output.decode('ascii'):
+    if not "---successful completion---" in output.decode('utf-8'):
         raise Exception("Script errored out")
     print("Successful completion")
 except FileNotFoundError as e:
