@@ -16,6 +16,12 @@ from bpy.props import (StringProperty,
                        CollectionProperty,
                        )
 
+from . bleMDUtils import *
+
+
+def startOvito(hardrefresh=False):
+    print("Bob Lablaugh")
+
 
 # ------------------------------------------------------------------------
 #    Scene Properties
@@ -25,6 +31,13 @@ class bleMDProperties(bpy.types.PropertyGroup):
 
     valid_lammps_file: BoolProperty(default=False)
     number_of_lammps_frames: IntProperty(default=1)
+
+    override_defaults: BoolProperty(
+        name="Override blender environment defaults",
+        description="Set general defaults to look better for MD on file load",
+        default=True,
+    )
+
 
     def updateFrameStride(self, context):
         scene = context.scene
@@ -59,6 +72,7 @@ class bleMDProperties(bpy.types.PropertyGroup):
     )
 
     def openLAMMPSFile(self, context):
+        resetDefaultsForMD()
         startOvito(hardrefresh=True)
 
 
