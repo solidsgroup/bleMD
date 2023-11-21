@@ -172,13 +172,29 @@ class WM_OT_bleMDOpenOvitoScript(Operator):
     def execute(self, context):
         if "Ovito" not in bpy.data.texts.keys():
             bpy.data.texts.new("Ovito")
-            bpy.data.texts['Ovito'].write("# You can put in your ovito script here!")
+            bpy.data.texts['Ovito'].write(
+"""
+#
+# You can set up OVITO commands to run here.
+#
+# You are given a "pipeline" object that has already been loaded.
+# All you need to do is set up the modifiers that you want to use.
+# For instance, you can use the following lines to unwrap trajectories:
+#
+#         from ovito.modifiers import UnwrapTrajectoriesModifier
+#         from ovito.modifiers import WrapPeriodicImagesModifier
+#         pipeline.modifiers.append(WrapPeriodicImagesModifier())
+#         pipeline.modifiers.append(UnwrapTrajectoriesModifier())
+#
+""")
+
 
         bpy.context.window.workspace = bpy.data.workspaces['Scripting']
         for area in context.screen.areas:
             if area.type == "TEXT_EDITOR":
-                break
-        area.spaces[0].text = bpy.data.texts['Ovito']        
+                for space in area.spaces:
+                    if type(space) == bpy.types.SpaceTextEditor:
+                        space.text = bpy.data.texts['Ovito']
 
         return {'FINISHED'}
 
