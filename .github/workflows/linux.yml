@@ -28,12 +28,12 @@ jobs:
     - name: install blender 4.0 from snap
       run: sudo snap install blender --channel=4.0/stable --classic
     - name: installing ovito with pip
-      run: sudo python3 -m pip install ovito
+      run: sudo python3.8 -m pip install ovito
     - name: check ovito install
-      run: python3 -s "import ovito"
+      run: python3.8 -s "import ovito"
     - name: package add-on
       run: make
     - name: install blender plugin
-      run: python3 scripts/wrapper.py blender -b --python scripts/install.py --python-exit-code 1
+      run: python3.8 scripts/wrapper.py blender -b --python scripts/install.py --python-exit-code 1
 
 
