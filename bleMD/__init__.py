@@ -255,8 +255,13 @@ classes = (
 
 
 def installOvito():
-    import pip
-    pip.main(['install', 'ovito'])
+    import sys
+    import subprocess
+    exe = sys.executable
+    subprocess.check_call([exe,'-m','pip','install','ovito'])
+
+    #import pip
+    #pip.main(['install', 'ovito'])
     import ovito
  
 print('FINISHED')
