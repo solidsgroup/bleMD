@@ -163,6 +163,36 @@ class WM_OT_bleMDBasicShade(Operator):
         updateDefaultShader()
 
         return {'FINISHED'}
+    
+class WM_OT_Enumerator(Operator):
+    bl_idname = "wm.enumerator"
+    bl_label = "Select Colormap"
+    
+    def execute(self, context):
+        scene = context.scene
+        mytool = scene.bleMD_props
+
+        mat = bpy.data.materials.get("my_mat")
+        mat_nodes = mat.node_tree.nodes
+        color_ramp = mat_nodes.get('ShaderNodeValToRGB')
+        
+        #Not currently functional
+        #TODO: set up color map to color ramp
+        if mytool.my_enum == 'OP1':
+            for x in range(128):
+                try:
+                    print('TRY')
+                    color_ramp.color_ramp.elements.remove(color_ramp.color_ramp.elements[1])
+                except:
+                    print('EXCEPT')
+                    break
+            print('DONE')
+        #if mytool.my_enum == 'OP2':
+        #if mytool.my_enum == 'OP3':
+        #if mytool.my_enum == 'OP4':
+        #if mytool.my_enum == 'OP5':
+
+        return {'FINISHED'}
 
 # ------------------------------------------------------------------------
 #    Panel in Object Mode
@@ -220,10 +250,14 @@ class OBJECT_PT_bleMDPanel(Panel):
 
         layout.label(text="Basic Shader",)
         layout.prop(mytool, "my_shader")
-        layout.prop(mytool, "my_normalhigh")
         layout.prop(mytool, "my_normallow")
+        layout.prop(mytool, "my_normalhigh")
         
         layout.operator("wm.basic_shade")
+
+        layout.prop(mytool, "my_enum")
+        row = layout.row()
+        row.operator("wm.enumerator")
 
         layout.label(text="Animation")
 
@@ -247,6 +281,7 @@ classes = (
     WM_OT_bleMDRenderAnimation,
     WM_OT_bleMDRigKeyframes,
     WM_OT_bleMDBasicShade,
+    WM_OT_Enumerator,
     bleMDDataFieldsLIProperty,
     bleMDDataFieldsList,
     OBJECT_PT_bleMDPanel,

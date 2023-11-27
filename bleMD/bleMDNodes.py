@@ -98,10 +98,30 @@ def updateDefaultShader():
     return my_shader
 
 
+def defaultSettings():
+    for scene in bpy.data.scenes:
+        scene.render.engine = 'CYCLES'
+        
+    bpy.context.window.workspace = bpy.data.workspaces['Shading']
+    for n in range(3,11): # This whole bit of code is hacky
+        for area in bpy.data.screens[n].areas: 
+           if area.type == 'VIEW_3D':
+               for space in area.spaces: 
+                   if space.type == 'VIEW_3D':
+                      space.shading.type = 'RENDERED'
+                      
+    bpy.context.space_data.context = 'OBJECT'
+
+
+def makeSun():
+    lamp = bpy.data.objects.get('Sun')
+    if lamp:
+        return
+    lamp = bpy.ops.object.light_add(type='SUN', radius=1, align='WORLD', location=(0, 0, 1000), scale=(1, 1, 1))
+
+
 def setup():
     create_material()
     create_geonodes()
-    for scene in bpy.data.scenes:
-        scene.render.engine = 'CYCLES'   
-
-    print("Hello")
+    defaultSettings()
+    makeSun()

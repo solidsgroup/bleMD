@@ -113,6 +113,17 @@ class bleMDProperties(bpy.types.PropertyGroup):
         default=0,
     )
 
+    my_enum: bpy.props.EnumProperty(
+    name="Colormap",
+    description="Select a colormap",
+    items=[('OP1', "Viridis", ""),
+            ('OP2', "Plasma", ""),
+            ('OP3', "Inferno", ""),
+            ('OP4', "Jet", ""),
+            ('OP5', "gnuplot2", "")]
+    
+    )
+
     #
     # Ovito Modifiers
     #
