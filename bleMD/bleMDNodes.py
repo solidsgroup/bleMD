@@ -74,8 +74,9 @@ def create_material():
     Math2.location = (-550, 250)
     bpy.data.materials["my_mat"].node_tree.nodes["Math.001"].operation = 'DIVIDE'
         
-    color_ramp = mat_nodes.new('ShaderNodeValToRGB')
+    color_ramp = mat_nodes.new(type='ShaderNodeValToRGB')
     color_ramp.location = (-350, 250)
+    color_ramp.name = "basicshader"
 
     mat.node_tree.links.new(attribute.outputs[2], Math1.inputs[0])
     mat.node_tree.links.new(Math1.outputs[0], Math2.inputs[0])
