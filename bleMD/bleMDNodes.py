@@ -113,6 +113,8 @@ def defaultSettings():
                       
     bpy.context.space_data.context = 'OBJECT'
 
+def updateRadius(self, context):
+    bpy.data.node_groups["geonode_object"].nodes["Mesh to Points"].inputs[3].default_value = self.my_radius
 
 def makeSun():
     lamp = bpy.data.objects.get('Sun')

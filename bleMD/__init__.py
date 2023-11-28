@@ -216,8 +216,6 @@ class WM_OT_Enumerator(Operator):
                 break
         
 
-        #Not currently functional
-        #TODO: set up color map to color ramp
         if mytool.my_enum == 'OP1':
             self.clearNode()
             self.assignNode(self.colormap32['viridis'])
@@ -300,6 +298,7 @@ class OBJECT_PT_bleMDPanel(Panel):
         layout.prop(mytool, "my_enum")
         row = layout.row()
         row.operator("wm.enumerator")
+        layout.prop(mytool, "my_radius")
 
         layout.label(text="Animation")
 

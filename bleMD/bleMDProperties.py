@@ -124,6 +124,13 @@ class bleMDProperties(bpy.types.PropertyGroup):
     
     )
 
+    my_radius: FloatProperty(
+        name="Standard Radius",
+        description="Change the radius size",
+        default=1,
+        update=updateRadius,
+    )
+
     #
     # Ovito Modifiers
     #
