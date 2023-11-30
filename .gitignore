@@ -1,1 +1,6 @@
+docs/build
 bleMD.zip
+__pycache__
+*.blend
+*.blend1
+output*
