@@ -10,6 +10,12 @@ jobs:
     - uses: actions/checkout@v2
     - name: installing preliminaries
       run: sudo apt install blender python3 libegl1 libopengl0
+    - name: installing ovito with pip
+      run: sudo python3 -m pip install ovito
+    - name: check ovito install
+      run: python3 -s "import ovito"
+    - name: package add-on
+      run: make
     - name: install blender plugin - first time just installing ovito
       run: blender -b --python scripts/install.py --python-exit-code 1
     - name: install blender plugin
@@ -23,6 +29,12 @@ jobs:
       run: sudo apt install blender python3.8 libegl1 libopengl0
     - name: install blender 4.0 from snap
       run: sudo snap install blender --channel=4.0/stable --classic
+    - name: installing ovito with pip
+      run: sudo python3.8 -m pip install ovito
+    - name: check ovito install
+      run: python3.8 -s "import ovito"
+    - name: package add-on
+      run: make
     - name: install blender plugin - first time just installing ovito
       run: blender -b --python scripts/install.py --python-exit-code 1
     - name: install blender plugin
