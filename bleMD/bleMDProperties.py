@@ -19,10 +19,6 @@ from bpy.props import (StringProperty,
 from . bleMDUtils import *
 
 
-def startOvito(hardrefresh=False):
-    print("Bob Lablaugh")
-
-
 # ------------------------------------------------------------------------
 #    Scene Properties
 # ------------------------------------------------------------------------

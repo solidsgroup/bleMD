@@ -97,6 +97,7 @@ def loadUpdatedData(pipeline):
     # Set up the object or grab the existing object
     # TODO: how do we handle multiple objects?
     if not "MD_Object" in bpy.data.objects.keys():
+        print("Creating new MD object")
         # Object does not yet exist: create it
         me = bpy.data.meshes.new("MD_Mesh")
         ob = bpy.data.objects.new("MD_Object", me)
@@ -104,6 +105,7 @@ def loadUpdatedData(pipeline):
         bpy.context.collection.objects.link(ob)
     else:
         # Object exists: use it
+        print("Using existing")
         ob = bpy.data.objects['MD_Object']
         me = ob.data
 
@@ -131,6 +133,7 @@ def loadUpdatedData(pipeline):
         #c_csym = [(1-fac)*x_lo + fac*x_hi for x_lo,x_hi in zip(data_lo.particles['c_csym'], data_hi.particles['c_csym'])]
 
     if not len(me.vertices):
+        print("No vertices in mesh, creating new ones. Need {} vertices".format(len(coords)))
         # Do this if the object has not been created yet
         # This line actually creates all the points
         me.from_pydata(coords, [], [])
@@ -141,6 +144,7 @@ def loadUpdatedData(pipeline):
                 attr = me.attributes.new(prop.name, 'FLOAT', 'POINT')
                 attr.data.foreach_set("value", attrs[prop.name])
     else:
+        print("Updating existing vertex properties")
         # We do this if we are just updating the positions and properties,
         # not creating
 

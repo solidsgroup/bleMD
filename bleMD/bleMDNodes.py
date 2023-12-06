@@ -3,9 +3,9 @@ import bpy
 def create_geonodes():
     obj = bpy.data.objects["MD_Object"]
         
-    geo_nodes = obj.modifiers.get("build_geonode")
-    if geo_nodes:
-        return
+    #geo_nodes = obj.modifiers.get("build_geonode")
+    #if geo_nodes:
+    #    return
         
     geo_nodes = obj.modifiers.new("build_geonode", "NODES")
 
@@ -16,8 +16,8 @@ def create_geonodes():
 def create_group(name="geonode_object"):
     group = bpy.data.node_groups.get(name)
     # check if a group already exists
-    if group:
-        return
+    #if group:
+    #    return
 
     group = bpy.data.node_groups.new(name, 'GeometryNodeTree')
     #group.inputs.new('NodeSocketGeometry', "Geometry")
@@ -48,8 +48,8 @@ def create_group(name="geonode_object"):
 
 def create_material():
     mat = bpy.data.materials.get("my_mat")
-    if mat:
-        return
+    #if mat:
+    #    return
         
     mat = bpy.data.materials.new("my_mat")
     obj = bpy.data.objects["MD_Object"]
@@ -99,6 +99,9 @@ def updateDefaultShader():
 
 
 def defaultSettings():
+    if not bpy.context.scene.bleMD_props.override_defaults:
+        return
+
     for scene in bpy.data.scenes:
         scene.render.engine = 'CYCLES'
         
