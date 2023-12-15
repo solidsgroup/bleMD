@@ -18,5 +18,20 @@ jobs:
       run: blender -b --python scripts/install.py --python-exit-code 1
     - name: install blender plugin
       run: python3 scripts/wrapper.py blender -b --python scripts/install.py --python-exit-code 1
+  ubuntu-22_04--blender_4_0:
+    name: Ubuntu 22.04 Blender 4.0
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: installing preliminaries
+      run: sudo apt install python3.8 libegl1 libopengl0
+    - name: install blender 4.0 from snap
+      run: sudo snap install blender --channel=4.0/stable --classic
+    - name: package add-on
+      run: make
+    - name: install blender plugin - first time just installing ovito
+      run: blender -b --python scripts/install.py --python-exit-code 1
+    - name: install blender plugin
+      run: python3 scripts/wrapper.py blender -b --python scripts/install.py --python-exit-code 1
 
 
