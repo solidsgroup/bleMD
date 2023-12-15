@@ -24,7 +24,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: installing preliminaries
-      run: sudo apt install python3.8 libegl1 libopengl0
+      run: sudo apt install python3 libegl1 libopengl0
     - name: install blender 4.0 from snap
       run: sudo snap install blender --channel=4.0/stable --classic
     - name: package add-on
