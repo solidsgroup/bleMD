@@ -51,13 +51,16 @@ def getkeys(name):
             g.append(igreen.get(k))
             b.append(iblue.get(k))
         return p, r, g, b
+
     elif "colors" in cmap.keys():
         p = []
         r = []
         g = []
         b = []
-        for i,c in enumerate(cmap['colors']):
-            p.append(i/len(cmap['colors']))
+        mod = int(len(cmap["colors"])/32)
+        if not mod: mod = 1
+        for i,c in enumerate(cmap['colors'][::mod]):
+            p.append(mod*i/len(cmap['colors']))
             r.append(c[0])
             g.append(c[1])
             b.append(c[2])

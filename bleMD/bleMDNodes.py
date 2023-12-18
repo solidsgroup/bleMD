@@ -104,7 +104,7 @@ def defaultSettings():
     for scene in bpy.data.scenes:
         scene.render.engine = 'CYCLES'
         
-    bpy.context.window.workspace = bpy.data.workspaces['Shading']
+    #bpy.context.window.workspace = bpy.data.workspaces['Shading']
     for n in range(3,11): # This whole bit of code is hacky
         for area in bpy.data.screens[n].areas: 
            if area.type == 'VIEW_3D':
