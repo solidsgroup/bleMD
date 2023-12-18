@@ -169,6 +169,13 @@ def loadUpdatedData(pipeline):
 
     me.update()
 
+
+    #props_for_selector = ()
+    #for a in attrs.keys():
+    #    props_for_selector.add((attr,attr,attr))
+    #bpy.context.scene.bleMD_props.colorby_property.items=props_for_selector
+
+
     # Call setup function - Jackson
     setup()
 

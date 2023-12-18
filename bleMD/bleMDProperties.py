@@ -18,6 +18,8 @@ from bpy.props import (StringProperty,
 
 from . bleMDUtils import *
 
+from . bleMDColormaps import cm, getkeys
+
 
 # ------------------------------------------------------------------------
 #    Scene Properties
@@ -89,35 +91,49 @@ class bleMDProperties(bpy.types.PropertyGroup):
         subtype='DIR_PATH'
     )
 
-    my_shader: StringProperty(
-        name="Select shader data",
-        description="Type in desired data field to shade by:",
-        default="c_csym",
-        maxlen=1024,
-        subtype='NONE'
-    )
-    
+    def my_normalhigh_normallow_update(self,context):
+        my_normalhigh = bpy.context.scene.bleMD_props.my_normalhigh
+        my_normallow = bpy.context.scene.bleMD_props.my_normallow
+        my_range = my_normalhigh - my_normallow
+        bpy.data.materials["my_mat"].node_tree.nodes["bleMD_MathNode1"].inputs[1].default_value = my_normallow
+        bpy.data.materials["my_mat"].node_tree.nodes["bleMD_MathNode2"].inputs[1].default_value = my_range
+
     my_normalhigh: FloatProperty(
         name="Data Max (for normalization)",
         description="Insert maximum value to shade by",
         default=1,
+        update=my_normalhigh_normallow_update,
     )
     
     my_normallow: FloatProperty(
         name="Data Min (for normalization)",
         description="Insert minimum value to shade by",
         default=0,
+        update=my_normalhigh_normallow_update,
     )
 
-    my_enum: bpy.props.EnumProperty(
-    name="Colormap",
-    description="Select a colormap",
-    items=[('OP1', "Viridis", ""),
-            ('OP2', "Plasma", ""),
-            ('OP3', "Inferno", ""),
-            ('OP4', "Jet", ""),
-            ('OP5', "gnuplot2", "")]
-    
+    def colormap_items(self,context):
+        return [(n,n,n) for n in cm.keys()]
+    def colormap_update(self,context):
+        while True:
+            elements = bpy.data.materials['my_mat'].node_tree.nodes['Color Ramp'].color_ramp.elements
+            if len(elements) == 1: 
+                bpy.data.materials['my_mat'].node_tree.nodes['Color Ramp'].color_ramp.elements[0].position=0
+                break
+            bpy.data.materials['my_mat'].node_tree.nodes['Color Ramp'].color_ramp.elements.remove(elements[-1])
+
+        K,R,G,B = getkeys(context.scene.bleMD_props.colormap)
+        bpy.data.materials['my_mat'].node_tree.nodes['Color Ramp'].color_ramp.elements[0].color = (R[0],G[0],B[0],1)
+
+        for k,r,g,b in zip(K,R,G,B):
+            elem = bpy.data.materials['my_mat'].node_tree.nodes['Color Ramp'].color_ramp.elements.new(position=k)
+            elem.color=(r,g,b,1)
+        
+    colormap: bpy.props.EnumProperty(
+        name="Colormap",
+        description="Select a colormap",
+        items=colormap_items,
+        update=colormap_update
     )
 
     #
@@ -135,7 +151,6 @@ class bleMDProperties(bpy.types.PropertyGroup):
         scene = context.scene
         mytool = scene.bleMD_props
         radius = mytool.my_radius
-
         obj = bpy.data.objects["MD_Object"]
         if not obj: return
         geonodes = obj.modifiers["build_geonode"]
@@ -143,11 +158,28 @@ class bleMDProperties(bpy.types.PropertyGroup):
         nodegroup = geonodes.node_group
         m2p = nodegroup.nodes["Mesh to Points"]
         m2p.inputs['Radius'].default_value = radius
-        
     my_radius: FloatProperty(
         name="Atom Radius",
         description="Radius",
         default=1,
         min=0,
         update=updateRadius,
+    )
+
+
+    def colorby_property_items(self,context):
+        ret = []
+        for item in context.scene.datafieldlist:
+            if item.enable: ret.append((item.name,item.name,item.name))
+        return ret
+    def colorby_property_update(self,context):
+        prop = context.scene.bleMD_props.colorby_property
+        print(prop)
+        bpy.data.materials["my_mat"].node_tree.nodes['Attribute'].attribute_name = prop
+    colorby_property: EnumProperty(
+        items=colorby_property_items,
+        update=colorby_property_update,
+        name="Color by:",
+        default=None,
+        description="Property to use for color shading",
     )

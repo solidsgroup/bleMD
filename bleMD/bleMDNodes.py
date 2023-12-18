@@ -51,54 +51,52 @@ def create_material():
     mat = bpy.data.materials.get("my_mat")
     #if mat:
     #    return
-        
-    mat = bpy.data.materials.new("my_mat")
+
+    if not "my_mat" in bpy.data.materials.keys():
+        mat = bpy.data.materials.new("my_mat")
+        mat.use_nodes = True
+        mat_nodes = mat.node_tree.nodes
+        material_output = mat.node_tree.nodes.get('Material Output')
+        default_BSDF = mat.node_tree.nodes.get('Principled BSDF')
+        mat.node_tree.nodes.remove(default_BSDF)
+        principled = mat.node_tree.nodes.new('ShaderNodeBsdfPrincipled')
+        principled.location.y = 350
+
+        attribute = mat_nodes.new('ShaderNodeAttribute')
+        attribute.location = (-900, 250)
+    
+        Math1 = mat_nodes.new('ShaderNodeMath',)
+        Math1.name="bleMD_MathNode1"
+        Math1.location = (-700, 250)
+        Math1.operation = 'SUBTRACT'
+        Math2 = mat_nodes.new('ShaderNodeMath',)    
+        Math2.name="bleMD_MathNode2"
+        Math2.location = (-550, 250)
+        Math2.operation = 'DIVIDE'
+    
+        color_ramp = mat_nodes.new('ShaderNodeValToRGB')
+        color_ramp.location = (-350, 250)
+
+        mat.node_tree.links.new(attribute.outputs[2], Math1.inputs[0])
+        mat.node_tree.links.new(Math1.outputs[0], Math2.inputs[0])
+        mat.node_tree.links.new(Math2.outputs[0], color_ramp.inputs[0])
+        mat.node_tree.links.new(color_ramp.outputs[0], principled.inputs[0])
+        mat.node_tree.links.new(principled.outputs[0], material_output.inputs[0])
+
+    else:
+        mat = bpy.data.materials["my_mat"]
+
     obj = bpy.data.objects["MD_Object"]
     obj.data.materials.append(mat)
-
-    mat.use_nodes = True
-    mat_nodes = mat.node_tree.nodes
-    material_output = mat.node_tree.nodes.get('Material Output')
-    default_BSDF = mat.node_tree.nodes.get('Principled BSDF')
-    mat.node_tree.nodes.remove(default_BSDF)
-
-    principled = mat.node_tree.nodes.new('ShaderNodeBsdfPrincipled')
-    principled.location.y = 350
-
-    attribute = mat_nodes.new('ShaderNodeAttribute')
-    attribute.location = (-900, 250)
-    
-    Math1 = mat_nodes.new('ShaderNodeMath',)
-    Math1.location = (-700, 250)
-    bpy.data.materials["my_mat"].node_tree.nodes["Math"].operation = 'SUBTRACT'
-    Math2 = mat_nodes.new('ShaderNodeMath',)    
-    Math2.location = (-550, 250)
-    bpy.data.materials["my_mat"].node_tree.nodes["Math.001"].operation = 'DIVIDE'
-        
-    color_ramp = mat_nodes.new('ShaderNodeValToRGB')
-    color_ramp.location = (-350, 250)
-
-    mat.node_tree.links.new(attribute.outputs[2], Math1.inputs[0])
-    mat.node_tree.links.new(Math1.outputs[0], Math2.inputs[0])
-    mat.node_tree.links.new(Math2.outputs[0], color_ramp.inputs[0])
-    mat.node_tree.links.new(color_ramp.outputs[0], principled.inputs[0])
-    mat.node_tree.links.new(principled.outputs[0], material_output.inputs[0])
-    
     
 def updateDefaultShader():
-    my_shader = bpy.context.scene.bleMD_props.my_shader
     my_normalhigh = bpy.context.scene.bleMD_props.my_normalhigh
     my_normallow = bpy.context.scene.bleMD_props.my_normallow
     my_range = my_normalhigh - my_normallow
     
-    bpy.data.materials["my_mat"].node_tree.nodes["Attribute"].attribute_name = my_shader
+    bpy.data.materials["my_mat"].node_tree.nodes["bleMD_MathNode1"].inputs[1].default_value = my_normallow
+    bpy.data.materials["my_mat"].node_tree.nodes["bleMD_MathNode2"].inputs[1].default_value = my_range
     
-    bpy.data.materials["my_mat"].node_tree.nodes["Math"].inputs[1].default_value = my_normallow
-    bpy.data.materials["my_mat"].node_tree.nodes["Math.001"].inputs[1].default_value = my_range
-    
-    return my_shader
-
-
 def defaultSettings():
     if not bpy.context.scene.bleMD_props.override_defaults:
         return
@@ -128,4 +126,4 @@ def setup():
     create_material()
     create_geonodes()
     defaultSettings()
-    makeSun()
+    #makeSun()

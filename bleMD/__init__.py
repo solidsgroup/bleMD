@@ -251,13 +251,13 @@ class OBJECT_PT_bleMDPanel(Panel):
         layout.operator("wm.read_lammps_file")
 
         layout.label(text="Basic Shader",)
-        layout.prop(mytool, "my_shader")
+        layout.prop(mytool, "colorby_property")
         layout.prop(mytool, "my_normallow")
         layout.prop(mytool, "my_normalhigh")
         
         layout.operator("wm.basic_shade")
 
-        layout.prop(mytool, "my_enum")
+        layout.prop(mytool, "colormap")
         row = layout.row()
         row.operator("wm.enumerator")
 
