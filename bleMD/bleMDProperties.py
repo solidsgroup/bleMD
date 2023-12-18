@@ -131,3 +131,23 @@ class bleMDProperties(bpy.types.PropertyGroup):
         default=False)
 
  
+    def updateRadius(self, context):
+        scene = context.scene
+        mytool = scene.bleMD_props
+        radius = mytool.my_radius
+
+        obj = bpy.data.objects["MD_Object"]
+        if not obj: return
+        geonodes = obj.modifiers["build_geonode"]
+        if not geonodes: return
+        nodegroup = geonodes.node_group
+        m2p = nodegroup.nodes["Mesh to Points"]
+        m2p.inputs['Radius'].default_value = radius
+        
+    my_radius: FloatProperty(
+        name="Atom Radius",
+        description="Radius",
+        default=1,
+        min=0,
+        update=updateRadius,
+    )

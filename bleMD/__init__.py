@@ -238,6 +238,8 @@ class OBJECT_PT_bleMDPanel(Panel):
         #layout.prop(mytool, "ovito_wrap_periodic_images")
         #layout.prop(mytool, "ovito_unwrap_trajectories")
 
+        layout.prop(mytool,"my_radius")
+
         #
         # DATA FIELDS
         #

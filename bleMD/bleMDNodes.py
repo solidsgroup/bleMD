@@ -3,23 +3,24 @@ import bpy
 def create_geonodes():
     obj = bpy.data.objects["MD_Object"]
         
-    #geo_nodes = obj.modifiers.get("build_geonode")
-    #if geo_nodes:
-    #    return
-        
-    geo_nodes = obj.modifiers.new("build_geonode", "NODES")
+    geo_nodes = obj.modifiers.get("build_geonode")
+    if not geo_nodes:
+        geo_nodes = obj.modifiers.new("build_geonode", "NODES")
 
     node_group = create_group()
     geo_nodes.node_group = node_group
 
 
 def create_group(name="geonode_object"):
+    mytool = bpy.context.scene.bleMD_props
+
     group = bpy.data.node_groups.get(name)
     # check if a group already exists
     #if group:
     #    return
 
     group = bpy.data.node_groups.new(name, 'GeometryNodeTree')
+    name = group.name
     #group.inputs.new('NodeSocketGeometry', "Geometry")
     #group.outputs.new('NodeSocketGeometry', "Geometry")
     group.interface.new_socket('My Output',in_out='INPUT',socket_type='NodeSocketGeometry')
@@ -36,8 +37,8 @@ def create_group(name="geonode_object"):
     mesh_to_points.location.x = -75
     set_material.location.x = 125
 
-    bpy.data.node_groups[name].nodes["Mesh to Points"].inputs[3].default_value = 1
-    bpy.data.node_groups["geonode_object"].nodes["Set Material"].inputs[2].default_value = bpy.data.materials["my_mat"]
+    bpy.data.node_groups[name].nodes["Mesh to Points"].inputs["Radius"].default_value = mytool.my_radius
+    bpy.data.node_groups[name].nodes["Set Material"].inputs[2].default_value = bpy.data.materials["my_mat"]
 
     group.links.new(input_node.outputs[0], mesh_to_points.inputs[0])
     group.links.new(mesh_to_points.outputs[0], set_material.inputs[0])
