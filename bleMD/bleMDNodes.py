@@ -1,7 +1,10 @@
 import bpy
 
 def create_geonodes():
-    obj = bpy.data.objects["MD_Object"]
+    #obj = bpy.data.objects["MD_Object"]
+    obj = bpy.context.object
+    if not "bleMD_object" in obj.data.keys():
+        return
         
     geo_nodes = obj.modifiers.get("build_geonode")
     if not geo_nodes:
@@ -12,7 +15,7 @@ def create_geonodes():
 
 
 def create_group(name="geonode_object"):
-    mytool = bpy.context.scene.bleMD_props
+    mytool = bpy.context.object.bleMD_props
 
     group = bpy.data.node_groups.get(name)
     # check if a group already exists
@@ -86,19 +89,21 @@ def create_material():
     else:
         mat = bpy.data.materials["my_mat"]
 
-    obj = bpy.data.objects["MD_Object"]
-    obj.data.materials.append(mat)
+    #obj = bpy.data.objects["MD_Object"]
+    obj = bpy.context.object
+    if "bleMD_object" in obj.data.keys():
+        obj.data.materials.append(mat)
     
 def updateDefaultShader():
-    my_normalhigh = bpy.context.scene.bleMD_props.my_normalhigh
-    my_normallow = bpy.context.scene.bleMD_props.my_normallow
+    my_normalhigh = bpy.context.object.bleMD_props.my_normalhigh
+    my_normallow = bpy.context.object.bleMD_props.my_normallow
     my_range = my_normalhigh - my_normallow
     
     bpy.data.materials["my_mat"].node_tree.nodes["bleMD_MathNode1"].inputs[1].default_value = my_normallow
     bpy.data.materials["my_mat"].node_tree.nodes["bleMD_MathNode2"].inputs[1].default_value = my_range
     
 def defaultSettings():
-    if not bpy.context.scene.bleMD_props.override_defaults:
+    if not bpy.context.object.bleMD_props.override_defaults:
         return
 
     for scene in bpy.data.scenes:
@@ -112,7 +117,7 @@ def defaultSettings():
                    if space.type == 'VIEW_3D':
                       space.shading.type = 'RENDERED'
                       
-    bpy.context.space_data.context = 'OBJECT'
+    #bpy.context.space_data.context = 'OBJECT'
 
 
 def makeSun():

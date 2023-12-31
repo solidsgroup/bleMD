@@ -39,7 +39,8 @@ class bleMDProperties(bpy.types.PropertyGroup):
 
     def updateFrameStride(self, context):
         scene = context.scene
-        mytool = scene.bleMD_props
+        obj = context.object
+        mytool = obj.bleMD_props
         nframes = mytool.number_of_lammps_frames
         stride = mytool.lammps_frame_stride
         bpy.context.scene.frame_start = 0
@@ -69,9 +70,9 @@ class bleMDProperties(bpy.types.PropertyGroup):
         max=100
     )
 
-    def openLAMMPSFile(self, context):
-        resetDefaultsForMD()
-        startOvito(hardrefresh=True)
+#    def openLAMMPSFile(self, context):
+#        resetDefaultsForMD()
+#        startOvito(hardrefresh=True)
 
 
     lammpsfile: StringProperty(
@@ -80,7 +81,7 @@ class bleMDProperties(bpy.types.PropertyGroup):
         default="",
         maxlen=1024,
         subtype='FILE_PATH',
-        update=openLAMMPSFile,
+        #update=openLAMMPSFile,
     )
 
     renderpath: StringProperty(
@@ -92,8 +93,8 @@ class bleMDProperties(bpy.types.PropertyGroup):
     )
 
     def my_normalhigh_normallow_update(self,context):
-        my_normalhigh = bpy.context.scene.bleMD_props.my_normalhigh
-        my_normallow = bpy.context.scene.bleMD_props.my_normallow
+        my_normalhigh = bpy.context.object.bleMD_props.my_normalhigh
+        my_normallow = bpy.context.object.bleMD_props.my_normallow
         my_range = my_normalhigh - my_normallow
         bpy.data.materials["my_mat"].node_tree.nodes["bleMD_MathNode1"].inputs[1].default_value = my_normallow
         bpy.data.materials["my_mat"].node_tree.nodes["bleMD_MathNode2"].inputs[1].default_value = my_range
@@ -122,7 +123,7 @@ class bleMDProperties(bpy.types.PropertyGroup):
                 break
             bpy.data.materials['my_mat'].node_tree.nodes['Color Ramp'].color_ramp.elements.remove(elements[-1])
 
-        K,R,G,B = getkeys(context.scene.bleMD_props.colormap)
+        K,R,G,B = getkeys(context.object.bleMD_props.colormap)
         bpy.data.materials['my_mat'].node_tree.nodes['Color Ramp'].color_ramp.elements[0].color = (R[0],G[0],B[0],1)
 
         for k,r,g,b in zip(K,R,G,B):
@@ -149,10 +150,14 @@ class bleMDProperties(bpy.types.PropertyGroup):
  
     def updateRadius(self, context):
         scene = context.scene
-        mytool = scene.bleMD_props
+        obj = context.object
+        mytool = obj.bleMD_props
         radius = mytool.my_radius
-        obj = bpy.data.objects["MD_Object"]
-        if not obj: return
+        obj = context.object
+        if not "bleMD_object" in obj.data.keys():
+            return
+        #obj = bpy.data.objects["MD_Object"]
+        #if not obj: return
         geonodes = obj.modifiers["build_geonode"]
         if not geonodes: return
         nodegroup = geonodes.node_group
@@ -169,11 +174,11 @@ class bleMDProperties(bpy.types.PropertyGroup):
 
     def colorby_property_items(self,context):
         ret = []
-        for item in context.scene.datafieldlist:
+        for item in context.object.datafieldlist:
             if item.enable: ret.append((item.name,item.name,item.name))
         return ret
     def colorby_property_update(self,context):
-        prop = context.scene.bleMD_props.colorby_property
+        prop = context.object.bleMD_props.colorby_property
         print(prop)
         bpy.data.materials["my_mat"].node_tree.nodes['Attribute'].attribute_name = prop
     colorby_property: EnumProperty(

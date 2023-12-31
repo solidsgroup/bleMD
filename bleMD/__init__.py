@@ -80,8 +80,8 @@ class WM_OT_bleMDReadLAMMPSFile(Operator):
     my_tmp_cntr = 0
 
     def execute(self, context):
-        pipeline = startOvito()
-        loadUpdatedData(pipeline)
+        ob, pipeline = startOvito()
+        loadUpdatedData(ob, pipeline)
 
         return {'FINISHED'}
 
@@ -92,8 +92,9 @@ class WM_OT_bleMDRigKeyframes(Operator):
 
     def execute(self, context):
         scene = bpy.context.scene
-        nlammpsframes = scene.bleMD_props.number_of_lammps_frames
-        stride = scene.bleMD_props.lammps_frame_stride
+        obj = bpy.context.object
+        nlammpsframes = obj.bleMD_props.number_of_lammps_frames
+        stride = obj.bleMD_props.lammps_frame_stride
 
         keyInterp = context.preferences.edit.keyframe_new_interpolation_type
         context.preferences.edit.keyframe_new_interpolation_type = 'LINEAR'
@@ -104,9 +105,9 @@ class WM_OT_bleMDRigKeyframes(Operator):
             for key in ob.data.shape_keys.key_blocks:
                 ob.shape_key_remove(key)
 
-        pipeline = startOvito()
+        ob, pipeline = startOvito()
         for i in range(nlammpsframes):
-            loadUpdatedData(pipeline)
+            loadUpdatedData(ob, pipeline)
             print(i)
             scene.frame_set(i*stride)
 
@@ -136,6 +137,7 @@ class WM_OT_bleMDRenderAnimation(Operator):
 
     def execute(self, context):
         scene = bpy.context.scene
+        obj = bpy.context.obj
 
         # Remove shape keyframes if there are any
         ob = bpy.data.objects['MD_Object']
@@ -143,13 +145,13 @@ class WM_OT_bleMDRenderAnimation(Operator):
             for key in ob.data.shape_keys.key_blocks:
                 ob.shape_key_remove(key)
 
-        pipeline = startOvito()
+        ob, pipeline = startOvito()
         for frame in range(scene.frame_start, scene.frame_end + 1):
             print("Rendering ", frame)
-            scene.render.filepath = scene.bleMD_props.renderpath + \
+            scene.render.filepath = obj.bleMD_props.renderpath + \
                 str(frame).zfill(4)
             scene.frame_set(frame)
-            loadUpdatedData(pipeline)
+            loadUpdatedData(ob, pipeline)
             bpy.ops.render.render(write_still=True)
 
         return {'FINISHED'}
@@ -170,7 +172,8 @@ class WM_OT_Enumerator(Operator):
     
     def execute(self, context):
         scene = context.scene
-        mytool = scene.bleMD_props
+        obj = context.object
+        mytool = obj.bleMD_props
 
         mat = bpy.data.materials.get("my_mat")
         mat_nodes = mat.node_tree.nodes
@@ -209,7 +212,12 @@ class OBJECT_PT_bleMDPanel(Panel):
 
     @classmethod
     def poll(self, context):
-        return context.object is not None
+        if not len(bpy.context.selected_objects): return False
+        if not context.object: return False
+        ob = bpy.context.object
+        if 'bleMD_object' not in ob.data.keys(): return False
+        return True
+        #return context.object is not None
 
     def execute(self, context):
         return {'FINISHED'}
@@ -220,7 +228,8 @@ class OBJECT_PT_bleMDPanel(Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        mytool = scene.bleMD_props
+        obj = context.object
+        mytool = obj.bleMD_props
 
         layout.prop(mytool, "override_defaults")
 
@@ -243,11 +252,11 @@ class OBJECT_PT_bleMDPanel(Panel):
         #
         # DATA FIELDS
         #
-        if len(scene.datafieldlist):
+        if len(obj.datafieldlist):
             layout.label(text="Data fields from file")
             row = layout.row()
-            row.template_list("bleMDDataFieldsList", "The_List", scene,
-                              "datafieldlist", scene, "list_index")
+            row.template_list("bleMDDataFieldsList", "The_List", obj,
+                              "datafieldlist", obj, "list_index")
         layout.operator("wm.read_lammps_file")
 
         layout.label(text="Basic Shader",)
@@ -272,6 +281,30 @@ class OBJECT_PT_bleMDPanel(Panel):
         layout.operator("wm.render_animation")
 
 
+class bleMDOpenFileDialogOperator(bpy.types.Operator):
+    bl_idname = "object.blemd_open_file_dialog"
+    bl_label = "Open MD file"
+
+    filepath: StringProperty(subtype='FILE_PATH')
+
+    def execute(self, context):
+        #resetDefaultsForMD()
+        #print("MY DATAFILE=",self.filepath)
+        ob, pipeline = startOvito(hardrefresh=True,filename=self.filepath)
+        #loadUpdatedData(ob, pipeline)
+        #bpy.context.object.bleMD_props.lammpsfile = self.filepath
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
+# Only needed if you want to add into a dynamic menu.
+def bleMDOpenFileDialogOperator_menu(self, context):
+    self.layout.operator_context = 'INVOKE_DEFAULT'
+    self.layout.operator(bleMDOpenFileDialogOperator.bl_idname, text="Dialog Operator")
+
 
 # ------------------------------------------------------------------------
 #    Registration
@@ -287,6 +320,7 @@ classes = (
     bleMDDataFieldsLIProperty,
     bleMDDataFieldsList,
     OBJECT_PT_bleMDPanel,
+    bleMDOpenFileDialogOperator,
 )
 
 
@@ -311,10 +345,10 @@ def register():
 
     bpy.app.handlers.frame_change_post.clear()
 
-    bpy.types.Scene.bleMD_props = PointerProperty(type=bleMDProperties)
+    bpy.types.Object.bleMD_props = PointerProperty(type=bleMDProperties)
 
-    bpy.types.Scene.datafieldlist = CollectionProperty(type=bleMDDataFieldsLIProperty)
-    bpy.types.Scene.list_index = IntProperty(
+    bpy.types.Object.datafieldlist = CollectionProperty(type=bleMDDataFieldsLIProperty)
+    bpy.types.Object.list_index = IntProperty(
         name="Index for datafieldlist", default=0)
 
 
@@ -328,14 +362,16 @@ def register():
     icons_dir = os.path.join(os.path.dirname(__file__), "resources")
     custom_icons.load("ovito", os.path.join(icons_dir, "ovito.png"), 'IMAGE')
 
+    bpy.types.VIEW3D_MT_add.append(bleMDOpenFileDialogOperator_menu)
+
 
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
         unregister_class(cls)
-    del bpy.types.Scene.bleMD_props
+    del bpy.types.Object.bleMD_props
     bpy.utils.previews.remove(custom_icons)
-
+    bpy.types.VIEW3D_MT_view.remove(bleMDOpenFileDialogOperator_menu)
 
 
 if __name__ == "__main__":
