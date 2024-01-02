@@ -11,9 +11,14 @@ class bleMDDataFieldsLIProperty(PropertyGroup):
         description="Property",
         default="Untitled")
 
+    #def set_needs_refresh(self,context):
+    #    context.object.bleMD_props.needs_refresh=True
+
     enable: BoolProperty(
         name="Enable",
-        description="Include as a coloring property")
+        description="Include as a coloring property",
+        #update=set_needs_refresh
+    )
 
     editable: BoolProperty(
         name="Editable",

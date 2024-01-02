@@ -40,37 +40,78 @@ from . bleMDUtils         import *
 class WM_OT_bleMDOpenOvitoScript(Operator):
     """This is the docstring"""
     bl_idname = "wm.open_ovito_script"
-    bl_label = "Open an Ovito script"
+    bl_label = "Create a new Ovito process script"
 
     def execute(self, context):
-        if "Ovito" not in bpy.data.texts.keys():
-            bpy.data.texts.new("Ovito")
-            bpy.data.texts['Ovito'].write(
+        newtext = bpy.data.texts.new("Ovito_ProcessScript")
+        newtext.write(
 """
 #
 # You can set up OVITO commands to run here.
 #
 # You are given a "pipeline" object that has already been loaded.
 # All you need to do is set up the modifiers that you want to use.
-# For instance, you can use the following lines to unwrap trajectories:
+# The following are some examples...
 #
-#         from ovito.modifiers import UnwrapTrajectoriesModifier
-#         from ovito.modifiers import WrapPeriodicImagesModifier
-#         pipeline.modifiers.append(WrapPeriodicImagesModifier())
-#         pipeline.modifiers.append(UnwrapTrajectoriesModifier())
+# from ovito.modifiers import UnwrapTrajectoriesModifier
+# pipeline.modifiers.append(WrapPeriodicImagesModifier())
+#
+# from ovito.modifiers import WrapPeriodicImagesModifier
+# pipeline.modifiers.append(UnwrapTrajectoriesModifier())
+#
+# from ovito.modifiers import CentroSymmetryModifier
+# pipeline.modifiers.append(CentroSymmetryModifier())
 #
 """)
-
-
-        bpy.context.window.workspace = bpy.data.workspaces['Scripting']
-        for area in context.screen.areas:
-            if area.type == "TEXT_EDITOR":
-                for space in area.spaces:
-                    if type(space) == bpy.types.SpaceTextEditor:
-                        space.text = bpy.data.texts['Ovito']
+        context.object.bleMD_props.process_script = newtext.name
 
         return {'FINISHED'}
 
+class WM_OT_bleMDNewOvitoOpenScript(Operator):
+    """This is the docstring"""
+    bl_idname = "wm.new_ovito_open_script"
+    bl_label = "Create an Ovito script for I/O"
+
+    def execute(self, context):
+        obj = context.object
+        newtext = bpy.data.texts.new("Ovito_OpenScript")
+        newtext.write(
+"""
+#
+# This is a basic IO routine using your original filename.
+# You can use this to add options or special features to the
+# import_file routine.
+#
+# This script MUST create a valid pipeline called "pipeline".
+#
+
+from ovito.io import import_file
+pipeline = import_file("{}",sort_particles=True)
+""".format(context.object.bleMD_props.lammpsfile))
+        
+        context.object.bleMD_props.io_open_script = newtext.name
+
+        return {'FINISHED'}
+    
+
+class WM_OT_bleMDCreateMaterial(Operator):
+    """Create bleMD Shader"""
+    bl_idname = "wm.create_material"
+    bl_label = "Create a new material"
+
+    def execute(self, context):
+        mat = create_material()
+        context.object.bleMD_props.mat_selection = mat.name
+        return {'FINISHED'}
+
+class WM_OT_bleMDDefaultSettings(Operator):
+    """Set some world properties"""
+    bl_idname = "wm.default_settings"
+    bl_label = "Configure blender for MD"
+
+    def execute(self, context):
+        resetDefaultsForMD()
+        return {'FINISHED'}
 
 class WM_OT_bleMDReadLAMMPSFile(Operator):
     """This is the docstring"""
@@ -82,7 +123,7 @@ class WM_OT_bleMDReadLAMMPSFile(Operator):
     def execute(self, context):
         ob, pipeline = startOvito()
         loadUpdatedData(ob, pipeline)
-
+        ob.bleMD_props.needs_refresh = False
         return {'FINISHED'}
 
 
@@ -157,45 +198,6 @@ class WM_OT_bleMDRenderAnimation(Operator):
         return {'FINISHED'}
 
 
-class WM_OT_bleMDBasicShade(Operator):
-    bl_idname = "wm.basic_shade"
-    bl_label = "Shade"
-
-    def execute(self, context):
-        updateDefaultShader()
-
-        return {'FINISHED'}
-    
-class WM_OT_Enumerator(Operator):
-    bl_idname = "wm.enumerator"
-    bl_label = "Select Colormap"
-    
-    def execute(self, context):
-        scene = context.scene
-        obj = context.object
-        mytool = obj.bleMD_props
-
-        mat = bpy.data.materials.get("my_mat")
-        mat_nodes = mat.node_tree.nodes
-        color_ramp = mat_nodes.get('ShaderNodeValToRGB')
-        
-        #Not currently functional
-        #TODO: set up color map to color ramp
-        if mytool.my_enum == 'OP1':
-            for x in range(128):
-                try:
-                    print('TRY')
-                    color_ramp.color_ramp.elements.remove(color_ramp.color_ramp.elements[1])
-                except:
-                    print('EXCEPT')
-                    break
-            print('DONE')
-        #if mytool.my_enum == 'OP2':
-        #if mytool.my_enum == 'OP3':
-        #if mytool.my_enum == 'OP4':
-        #if mytool.my_enum == 'OP5':
-
-        return {'FINISHED'}
 
 # ------------------------------------------------------------------------
 #    Panel in Object Mode
@@ -231,51 +233,77 @@ class OBJECT_PT_bleMDPanel(Panel):
         obj = context.object
         mytool = obj.bleMD_props
 
-        layout.prop(mytool, "override_defaults")
+        layout.operator("wm.default_settings")
 
         #
         # FILE IO
         #
         layout.label(text="Load Data File",icon='FILE_FOLDER')
-        layout.prop(mytool, "lammpsfile")
+        layout.prop(mytool,"io_method",expand=True)
+        if mytool.io_method == {"openfile"}:
+            layout.prop(mytool, "lammpsfile")
+        elif mytool.io_method == {"script"}:
+            layout.operator("wm.new_ovito_open_script")
+            layout.prop_search(mytool,"io_open_script",bpy.data,"texts")
 
         #
         # OVITO OPERATIONS
         #
         layout.label(text="OVITO Operations",icon='GROUP_VERTEX')
-        layout.operator("wm.open_ovito_script")
-        #layout.prop(mytool, "ovito_wrap_periodic_images")
-        #layout.prop(mytool, "ovito_unwrap_trajectories")
+        layout.prop(mytool,"process_script_enable")
+        if mytool.process_script_enable:
+            layout.operator("wm.open_ovito_script")
+            layout.prop_search(mytool,"process_script",bpy.data,"texts")
 
-        layout.prop(mytool,"my_radius")
+
 
         #
         # DATA FIELDS
         #
+
+
         if len(obj.datafieldlist):
             layout.label(text="Data fields from file")
             row = layout.row()
             row.template_list("bleMDDataFieldsList", "The_List", obj,
                               "datafieldlist", obj, "list_index")
-        layout.operator("wm.read_lammps_file")
 
-        layout.label(text="Basic Shader",)
-        layout.prop(mytool, "colorby_property")
-        layout.prop(mytool, "my_normallow")
-        layout.prop(mytool, "my_normalhigh")
         
-        layout.operator("wm.basic_shade")
-
-        layout.prop(mytool, "colormap")
         row = layout.row()
-        row.operator("wm.enumerator")
+        row.alert = mytool.needs_refresh
+        row.operator("wm.read_lammps_file")
 
-        layout.label(text="Animation")
+        
+        if not len(obj.data.vertices):
+            return
+
+        layout.label(text="Load",icon='GROUP_VERTEX')
+        layout.prop(mytool,"my_radius")
+
+        layout.label(text="Shading",icon='SHADING_RENDERED')
+
+        layout.operator("wm.create_material")
+        layout.prop_search(mytool,
+                           "mat_selection",
+                           bpy.data,
+                           "materials")
+        
+        if mytool.mat_selection in bpy.data.materials.keys():
+            if bpy.data.materials[mytool.mat_selection].bleMD:
+                mattool = bpy.data.materials[mytool.mat_selection].bleMD_props
+                layout.prop(mattool, "colorby_property")
+                layout.prop(mattool, "colormap")
+                row = layout.row()
+                split = row.split()
+                split.prop(mattool, "my_normallow")
+                split.prop(mattool, "my_normalhigh")
+
+        layout.label(text="Animation",icon='FORCE_VORTEX')
 
         layout.prop(mytool, "lammps_frame_stride")
         layout.operator("wm.rig_keyframes")
 
-        layout.label(text="Render")
+        layout.label(text="Render",icon='CAMERA_DATA')
 
         layout.prop(mytool, "renderpath")
         layout.operator("wm.render_animation")
@@ -287,8 +315,18 @@ class bleMDOpenFileDialogOperator(bpy.types.Operator):
 
     filepath: StringProperty(subtype='FILE_PATH')
 
+    @classmethod
+    def poll(self, context):
+        if not len(bpy.context.selected_objects):
+            return True
+        ob = bpy.context.object
+        if ob:
+            if 'bleMD_object' in ob.data.keys():
+                return False
+        return True
+
+
     def execute(self, context):
-        #resetDefaultsForMD()
         #print("MY DATAFILE=",self.filepath)
         ob, pipeline = startOvito(hardrefresh=True,filename=self.filepath)
         #loadUpdatedData(ob, pipeline)
@@ -303,7 +341,7 @@ class bleMDOpenFileDialogOperator(bpy.types.Operator):
 # Only needed if you want to add into a dynamic menu.
 def bleMDOpenFileDialogOperator_menu(self, context):
     self.layout.operator_context = 'INVOKE_DEFAULT'
-    self.layout.operator(bleMDOpenFileDialogOperator.bl_idname, text="Dialog Operator")
+    self.layout.operator(bleMDOpenFileDialogOperator.bl_idname, text="Open MD file")
 
 
 # ------------------------------------------------------------------------
@@ -311,12 +349,14 @@ def bleMDOpenFileDialogOperator_menu(self, context):
 # ------------------------------------------------------------------------
 classes = (
     bleMDProperties,
+    bleMD_material,
+    WM_OT_bleMDDefaultSettings,
     WM_OT_bleMDOpenOvitoScript,
+    WM_OT_bleMDNewOvitoOpenScript,
+    WM_OT_bleMDCreateMaterial,
     WM_OT_bleMDReadLAMMPSFile,
     WM_OT_bleMDRenderAnimation,
     WM_OT_bleMDRigKeyframes,
-    WM_OT_bleMDBasicShade,
-    WM_OT_Enumerator,
     bleMDDataFieldsLIProperty,
     bleMDDataFieldsList,
     OBJECT_PT_bleMDPanel,
@@ -362,9 +402,15 @@ def register():
     icons_dir = os.path.join(os.path.dirname(__file__), "resources")
     custom_icons.load("ovito", os.path.join(icons_dir, "ovito.png"), 'IMAGE')
 
+    # Add "Open MD File" to the "add" menu
     bpy.types.VIEW3D_MT_add.append(bleMDOpenFileDialogOperator_menu)
 
-
+    #
+    # Add custom material types
+    #
+    bpy.types.Material.bleMD = bpy.props.BoolProperty(name="bleMD enabled")
+    bpy.types.Material.bleMD_props = PointerProperty(type=bleMD_material)
+    
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):

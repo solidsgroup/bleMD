@@ -1,4 +1,5 @@
 import bpy
+import bmesh
 
 from . bleMDNodes import *
 
@@ -8,9 +9,6 @@ from . bleMDNodes import *
 # values so that things look good the first time.
 #
 def resetDefaultsForMD():
-    if not bpy.context.object.bleMD_props.override_defaults:
-        return
-
     # Set the camera so that objects too far away do not get clipped off
     bpy.data.objects['Camera'].data.clip_end=10000000000
 
@@ -28,7 +26,7 @@ def resetDefaultsForMD():
 
 #
 # KEY SUBROUTINE 1/2
-# Opens Ovito and does basic communication with dump fil
+# Opens Ovito and does basic communication with dump file
 #
 def startOvito(hardrefresh=False, filename=None):
     if not filename:
@@ -68,16 +66,27 @@ def startOvito(hardrefresh=False, filename=None):
     #
     # Load the file
     #
-    from ovito.io import import_file
-    print("FILENAME = ",filename)
-    pipeline = import_file(filename, sort_particles=True)
+    pipline = None
 
+    if mytool.io_method == {"openfile"}:
+        from ovito.io import import_file
+        pipeline = import_file(filename, sort_particles=True)
+    elif mytool.io_method == {"script"}:
+        scriptname = mytool.io_open_script
+        local = {}
+        exec(bpy.data.texts[scriptname].as_string(),globals(),local)
+        pipeline = local['pipeline']
+    else:
+        print("Error in IO method selection",mytool.io_method)
 
     #
     # Execute User's Ovito Python script if applicable
     #
-    if "Ovito" in bpy.data.texts.keys():
-        exec(bpy.data.texts['Ovito'].as_string())
+    if mytool.process_script_enable:
+        scriptname = mytool.process_script
+        local = locals()
+        exec(bpy.data.texts[scriptname].as_string(),globals(),local)
+        pipeline = local['pipeline']
     
     #
     # Adjust number of frames 
@@ -165,8 +174,9 @@ def loadUpdatedData(ob, pipeline):
 
         #c_csym = [(1-fac)*x_lo + fac*x_hi for x_lo,x_hi in zip(data_lo.particles['c_csym'], data_hi.particles['c_csym'])]
 
-    if not len(me.vertices):
-        print("No vertices in mesh, creating new ones. Need {} vertices".format(len(coords)))
+    if len(me.vertices) != len(coords):
+        print("Regenerating mesh. Need {} vertices".format(len(coords)))
+
         # Do this if the object has not been created yet
         # This line actually creates all the points
         me.from_pydata(coords, [], [])
