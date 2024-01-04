@@ -204,7 +204,7 @@ class WM_OT_bleMDRenderAnimation(Operator):
 
 
 class OBJECT_PT_bleMDPanel(Panel):
-    bl_label = "OVITO Molecular Dynamics"
+    bl_label = "bleMD Molecular Dynamics"
     bl_idname = "OBJECT_PT_bleMDPanel"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
@@ -224,7 +224,7 @@ class OBJECT_PT_bleMDPanel(Panel):
         return {'FINISHED'}
 
     def draw_header(self, context):
-        self.layout.label(text="", icon_value=custom_icons["ovito"].icon_id)
+        self.layout.label(text="", icon_value=custom_icons["bleMD_white"].icon_id)
         
     def draw(self, context):
         layout = self.layout
@@ -400,6 +400,8 @@ def register():
     ## this will work for addons 
     icons_dir = os.path.join(os.path.dirname(__file__), "resources")
     custom_icons.load("ovito", os.path.join(icons_dir, "ovito.png"), 'IMAGE')
+    custom_icons.load("bleMD_white", os.path.join(icons_dir, "bleMD_white.png"), 'IMAGE')
+    custom_icons.load("bleMD_black", os.path.join(icons_dir, "bleMD_black.png"), 'IMAGE')
 
     # Add "Open MD File" to the "add" menu
     bpy.types.VIEW3D_MT_add.append(bleMDOpenFileDialogOperator_menu)
