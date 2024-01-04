@@ -178,13 +178,12 @@ class WM_OT_bleMDRenderAnimation(Operator):
 
     def execute(self, context):
         scene = bpy.context.scene
-        obj = bpy.context.obj
+        obj = bpy.context.object
 
         # Remove shape keyframes if there are any
-        ob = bpy.data.objects['MD_Object']
-        if ob.data.shape_keys:
-            for key in ob.data.shape_keys.key_blocks:
-                ob.shape_key_remove(key)
+        if obj.data.shape_keys:
+            for key in obj.data.shape_keys.key_blocks:
+                obj.shape_key_remove(key)
 
         ob, pipeline = startOvito()
         for frame in range(scene.frame_start, scene.frame_end + 1):
