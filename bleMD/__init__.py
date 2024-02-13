@@ -278,6 +278,8 @@ class OBJECT_PT_bleMDPanel(Panel):
 
         layout.label(text="Load",icon='GROUP_VERTEX')
         layout.prop(mytool,"my_radius")
+        layout.prop(mytool,"my_plane_vector")
+        layout.prop(mytool,"my_plane_thickness")
 
         layout.label(text="Shading",icon='SHADING_RENDERED')
 

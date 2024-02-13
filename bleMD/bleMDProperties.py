@@ -182,7 +182,41 @@ class bleMDProperties(bpy.types.PropertyGroup):
         update=updateRadius,
     )
 
-
+    def updateSlice(self, context):
+        """
+        Update the slice using the given context and object properties.
+        """
+        scene = context.scene
+        obj = context.object
+        mytool = obj.bleMD_props
+        thickness = mytool.my_plane_thickness
+        planeVector = mytool.my_plane_vector
+        planeVectorABC = planeVector[:3]
+        planeVectorD = planeVector[3]
+        obj = context.object
+        if not "bleMD_object" in obj.data.keys(): return
+        geonodes = obj.modifiers["build_geonode"]
+        if not geonodes: return
+        nodegroup = geonodes.node_group
+        pvABC = nodegroup.nodes["Plane Vector"]
+        pvABC.vector = planeVectorABC
+        pvD = nodegroup.nodes["Plane Distance"]
+        pvD.outputs["Value"].default_value = planeVectorD
+        GT = nodegroup.nodes["Plane Thickness"]
+        GT.inputs[1].default_value = thickness
+    my_plane_vector: FloatVectorProperty(
+        name="Plane Equation for Slice",
+        description="Describe the plane in the form Ax + By + Cz + D = 0.  Set to [0 0 0 0] to disable slicing.",
+        default=(0.0, 0.0, 0.0, 0.0),
+        size=4,
+        update=updateSlice,
+    )
+    my_plane_thickness: FloatProperty(
+        name="Plane Thickness",
+        description="Define the thickness of the slice.",
+        default=0,
+        update=updateSlice,
+    )
 
 
 #
