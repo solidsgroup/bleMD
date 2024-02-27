@@ -237,7 +237,7 @@ class bleMD_material(bpy.types.PropertyGroup):
     colorby_property: EnumProperty(
         items=colorby_property_items,
         update=colorby_property_update,
-        name="Color by:",
+        name="Color by",
         default=None,
         description="Property to use for color shading",
     )

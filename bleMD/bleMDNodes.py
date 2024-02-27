@@ -235,7 +235,7 @@ def updateDefaultShader():
     bpy.data.materials["my_mat"].node_tree.nodes["bleMD_MathNode2"].inputs[1].default_value = my_range
     
 def defaultSettings():
-
+    
     for scene in bpy.data.scenes:
         scene.render.engine = 'CYCLES'
         

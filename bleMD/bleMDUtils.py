@@ -12,6 +12,9 @@ def resetDefaultsForMD():
     # Set the camera so that objects too far away do not get clipped off
     bpy.data.objects['Camera'].data.clip_end=10000000000
 
+    #Set view transform to Standard for fully white background
+    bpy.context.scene.view_settings.view_transform = 'Standard'
+
     # Go through all current 3D views and set clips for that as well
     for screen in bpy.data.screens:
         for area in screen.areas:
