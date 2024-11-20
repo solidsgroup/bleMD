@@ -75,3 +75,9 @@ Blender's rich toolset and intuitive interface make it an ideal platform for cre
 #### Step 4: Animate and Render
 - Set the animation frame stride, rig keyframes, and render the sequence.
 
+### Gallery
+![indent1 NEW  (2)](https://github.com/user-attachments/assets/13f859b0-1195-47d5-9bc2-20eb59ec6857)
+![0650](https://github.com/user-attachments/assets/856f8ade-d7dd-4cf2-a50c-c6556b99874d)
+![0036](https://github.com/user-attachments/assets/60996955-14bc-4555-9345-0faa347cd951)
+![glasspink](https://github.com/user-attachments/assets/b0948ef8-9b46-49de-8ec3-f0a4a2f0b765)
+![viridisexample](https://github.com/user-attachments/assets/1b4336bc-de1c-460c-a50b-c93ac5dbe60a)
