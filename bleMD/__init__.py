@@ -4,7 +4,7 @@ bl_info = {
     "author": "brunnels",
     "version": (0, 0, 0),
     "blender": (4, 0, 0),
-    "location": "3D View > Tools",
+    "location": "Editor Type > bleMD",
     "warning": "",  # used for warning icon and text in addons panel
     "category": "Generic"
 }
@@ -31,6 +31,7 @@ from bpy.props import (StringProperty,
 from . bleMDProperties    import *
 from . bleMDDataFieldList import *
 from . bleMDUtils         import *
+from . import bleMDTree
 
 
 # ------------------------------------------------------------------------
@@ -216,6 +217,7 @@ class OBJECT_PT_bleMDPanel(Panel):
         if not len(bpy.context.selected_objects): return False
         if not context.object: return False
         ob = bpy.context.object
+        if ob.type != 'MESH' or ob.bleMD_node_tree: return False
         if 'bleMD_object' not in ob.data.keys(): return False
         return True
         #return context.object is not None
@@ -365,6 +367,10 @@ classes = (
 
 
 def installOvito():
+    import importlib.util
+    if importlib.util.find_spec("ovito") is not None:
+        import ovito
+        return
     import sys
     import subprocess
     exe = sys.executable
@@ -379,10 +385,9 @@ print('FINISHED')
 def register():
     import bpy
     from bpy.utils import register_class
+    installOvito()
     for cls in classes:
         register_class(cls)
-
-    bpy.app.handlers.frame_change_post.clear()
 
     bpy.types.Object.bleMD_props = PointerProperty(type=bleMDProperties)
 
@@ -390,8 +395,6 @@ def register():
     bpy.types.Object.list_index = IntProperty(
         name="Index for datafieldlist", default=0)
 
-
-    installOvito()
 
     import bpy.utils.previews
     global custom_icons
@@ -411,14 +414,20 @@ def register():
     #
     bpy.types.Material.bleMD = bpy.props.BoolProperty(name="bleMD enabled")
     bpy.types.Material.bleMD_props = PointerProperty(type=bleMD_material)
+    bleMDTree.register()
     
 def unregister():
     from bpy.utils import unregister_class
+    bleMDTree.unregister()
+    bpy.types.VIEW3D_MT_add.remove(bleMDOpenFileDialogOperator_menu)
+    del bpy.types.Material.bleMD_props
+    del bpy.types.Material.bleMD
+    del bpy.types.Object.list_index
+    del bpy.types.Object.datafieldlist
+    del bpy.types.Object.bleMD_props
     for cls in reversed(classes):
         unregister_class(cls)
-    del bpy.types.Object.bleMD_props
     bpy.utils.previews.remove(custom_icons)
-    bpy.types.VIEW3D_MT_view.remove(bleMDOpenFileDialogOperator_menu)
 
 
 if __name__ == "__main__":

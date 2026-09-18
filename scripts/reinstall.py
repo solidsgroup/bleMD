@@ -1,6 +1,6 @@
-import bpy
-bpy.ops.preferences.addon_disable(module='bleMD')
-bpy.ops.preferences.addon_remove(module='bleMD')
-bpy.ops.preferences.addon_install(filepath="./bleMD.zip",overwrite=True)
-bpy.ops.preferences.addon_enable(module='bleMD')
-print("---successful completion---")
+"""Compatibility entry point; install.py handles both installs and updates."""
+
+from pathlib import Path
+import runpy
+
+runpy.run_path(str(Path(__file__).with_name("install.py")), run_name="__main__")

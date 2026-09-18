@@ -213,19 +213,8 @@ class bleMD_material(bpy.types.PropertyGroup):
     def colormap_update(self,context):
         obj = context.object
         mat = bpy.data.materials[obj.bleMD_props.mat_selection]
-        while True:
-            elements = mat.node_tree.nodes['Color Ramp'].color_ramp.elements
-            if len(elements) == 1: 
-                mat.node_tree.nodes['Color Ramp'].color_ramp.elements[0].position=0
-                break
-            mat.node_tree.nodes['Color Ramp'].color_ramp.elements.remove(elements[-1])
-
-        K,R,G,B = getkeys(mat.bleMD_props.colormap)
-        mat.node_tree.nodes['Color Ramp'].color_ramp.elements[0].color = (R[0],G[0],B[0],1)
-
-        for k,r,g,b in zip(K,R,G,B):
-            elem = mat.node_tree.nodes['Color Ramp'].color_ramp.elements.new(position=k)
-            elem.color=(r,g,b,1)
+        from .bleMDPalette import apply_ramp
+        apply_ramp(mat.node_tree.nodes['Color Ramp'].color_ramp, mat.bleMD_props.colormap)
     colormap: bpy.props.EnumProperty(
         name="Colormap",
         description="Select a colormap",

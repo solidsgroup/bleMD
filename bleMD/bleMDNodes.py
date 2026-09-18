@@ -1,7 +1,7 @@
 import bpy
 
-def create_geonodes():
-    obj = bpy.context.object
+def create_geonodes(obj=None):
+    obj = obj if obj is not None else bpy.context.object
 
     if not "bleMD_object" in obj.data.keys():
         return
@@ -9,12 +9,14 @@ def create_geonodes():
     #geo_nodes = obj.modifiers["build_geonode"]
     if not "build_geonode" in obj.modifiers.keys():
         geo_nodes = obj.modifiers.new("build_geonode", "NODES")
-        node_group = create_group("meshtopoints")
+        node_group = create_group("meshtopoints", obj)
         geo_nodes.node_group = node_group
+        from .bleMDViewport import ensure_preview
+        ensure_preview(obj)
 
-def create_group(name="geonode_object"):
-    obj = bpy.context.object
-    mytool = bpy.context.object.bleMD_props
+def create_group(name="geonode_object", obj=None):
+    obj = obj if obj is not None else bpy.context.object
+    mytool = obj.bleMD_props
     
     group = bpy.data.node_groups.get(name)
 
@@ -120,3 +122,16 @@ def setup():
     create_geonodes()
     defaultSettings()
     #makeSun()
+
+
+def create_field_material():
+    """A default shader for the explicit Color input; existing materials stay editable."""
+    mat = bpy.data.materials.new('bleMD Field Color')
+    mat.use_nodes = True
+    tree = mat.node_tree
+    attribute = tree.nodes.new('ShaderNodeAttribute')
+    attribute.attribute_name = 'bleMD Color'
+    attribute.label = 'bleMD particle color'
+    attribute.location = (-300, 100)
+    tree.links.new(attribute.outputs['Color'], tree.nodes['Principled BSDF'].inputs['Base Color'])
+    return mat

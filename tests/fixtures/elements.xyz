@@ -1,0 +1,20 @@
+8
+Properties=species:S:1:pos:R:3:id:I:1:Z:I:1
+O 0 0 0 4 8
+H 1 0 0 1 1
+C 2 0 0 2 6
+N 3 0 0 3 7
+S 4 0 0 5 16
+Cl 5 0 0 6 17
+Fe 6 0 0 7 26
+Unknown 7 0 0 8 0
+8
+Properties=species:S:1:pos:R:3:id:I:1:Z:I:1
+Unknown 7 1 0 8 0
+Fe 6 1 0 7 26
+Cl 5 1 0 6 17
+S 4 1 0 5 16
+N 3 1 0 3 7
+C 2 1 0 2 6
+H 1 1 0 1 1
+O 0 1 0 4 8

@@ -1,20 +1,12 @@
+"""Legacy command wrapper. Pass Blender --python-exit-code 1 for script errors.
+
+The Make targets use workflow.py directly; no success-message parsing is needed.
+"""
+
 import subprocess
 import sys
 
-try:
-    output = subprocess.check_output(sys.argv[1:])
-    print(output.decode('utf-8'))
-    if not "---successful completion---" in output.decode('utf-8'):
-        raise Exception("Script errored out")
-    print("Successful completion")
-except FileNotFoundError as e:
-    print("could not find file", e)#, e.output)
-    raise e
-except subprocess.CalledProcessError as e:
-    print("error code", e.returncode)#, e.output)
-    raise e
-except Exception as e:
-    print(e)
-    raise e
-
-print("Ah yes, definitely successful")
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.exit("Usage: wrapper.py COMMAND [ARG ...]")
+    sys.exit(subprocess.run(sys.argv[1:]).returncode)
